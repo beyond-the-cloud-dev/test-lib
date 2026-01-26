@@ -1,0 +1,16 @@
+{
+  "packageDirectories": [
+    {
+      "versionName": "ver 1.0",
+      "versionNumber": "1.0.0.NEXT",
+      "path": "force-app",
+      "default": true,
+      "package": "Package Name Lib",
+      "versionDescription": ""
+    }
+  ],
+  "name": "BeyondTheCloud",
+  "namespace": "btcdev",
+  "sfdcLoginUrl": "https://login.salesforce.com",
+  "sourceApiVersion": "65.0"
+}
