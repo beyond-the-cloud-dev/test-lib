@@ -5,6 +5,7 @@ public virtual class TestData implements Builder {
        Builder randomize(Randomizer randomizer); 
        Builder set(SObjectField field, Object value);
        Builder set(String field, Object value);
+       Builder set(SObjectField field, Builder relatedRecordBuilder);
 
        SObject build();
        SObject buildAndInsert(); // or buildAndSave()
@@ -45,6 +46,10 @@ public virtual class TestData implements Builder {
     }
 
     public Builder set(String field, Object value) {
+       return this;
+    }
+
+    public Builder set(SObjectField field, Builder relatedRecordBuilder) {
        return this;
     }
     
