@@ -2,7 +2,7 @@
 Account account1 = AccountTestModule.builder().withName('Test').build();
 Account account2 = AccountTestModule.builder().withName('Test 2').buildAndInsert();
 
-Account account3 = AccountTestModule.mocker().withName('Test 3').setChildren('Contacts', new List<...>()).build();
+Account account3 = AccountTestModule.mocker().withName('Test 3').withContacts(new List<...>()).build();
 */
 public with sharing class AccountTestModule implements TestModule.BuilderProvider, TestModule.MockerProvider {
     public static Builder builder() {
