@@ -24,3 +24,21 @@ public virtual class TestModule {
 
     
 }
+
+/*
+Account account = AccountTestModule
+    .builder()
+    .withName('Test Account')
+    .withIndustry('Technology')
+    .withAnnualRevenue(1000000)
+    .buildAndSave();
+
+AccountTestModule
+    .mock()
+    .withName('Test Account')
+    .withIndustry('Technology')
+    .withAnnualRevenue(1000000)
+    .build();
+
+
+*/

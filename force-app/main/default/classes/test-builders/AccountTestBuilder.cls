@@ -28,7 +28,7 @@ public with sharing class AccountTestBuilder extends TestModule implements TestM
             Account.BillingCountry => 'USA',
             Account.BillingPostalCode => '10001',
             Account.BillingStreet => '123 Main St',
-            Account.BillingStreet => '123 Main St',
+            Account.BillingStreet => '123 Main St'
         }
     }
 }
