@@ -1,15 +1,15 @@
 /*
-Account account1 = AccountTestModule.builder().withName('Test').get();
-Account account2 = AccountTestModule.builder().withName('Test 2').insertAndGet();
+Account account1 = AccountTestModule.Builder().withName('Test').get();
+Account account2 = AccountTestModule.Builder().withName('Test 2').insertAndGet();
 
-Account account3 = AccountTestModule.mocker().withName('Test 3').with('Contacts', new List<...>()).get();
+Account account3 = AccountTestModule.Mocker().withName('Test 3').with('Contacts', new List<...>()).get();
 */
-public with sharing class AccountTestModule {
-    public static Builder builder() {
+public with sharing class AccountTestModule implements TestModule.Builder2, TestModule.Mocker2 {
+    public static Builder Builder() { // forced by implementation TestModule.Builder2
         return new Builder();
     }
 
-    public static Mocker mocker() {
+    public static Mocker Mocker() { // forced by implementation TestModule.Mocker2
         return new Mocker();
     }
 
