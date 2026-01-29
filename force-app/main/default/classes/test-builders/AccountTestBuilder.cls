@@ -1,6 +1,6 @@
-public with sharing class AccountTestBuilder extends TestModule implements TestModule.Builder, TestModule.Randomizer {
+public with sharing class AccountTestBuilder extends TestModule.Builder implements TestModule.IBuilder, TestModule.IRandomizer {
     public AccountTestBuilder() {
-        super(Account.SObjectType);
+        super(new Account(Name = 'Test Account'));
     }
 
     public AccountTestBuilder withName(String name) {
@@ -27,8 +27,7 @@ public with sharing class AccountTestBuilder extends TestModule implements TestM
             Account.BillingState => 'CA',
             Account.BillingCountry => 'USA',
             Account.BillingPostalCode => '10001',
-            Account.BillingStreet => '123 Main St',
             Account.BillingStreet => '123 Main St'
-        }
+        };
     }
 }

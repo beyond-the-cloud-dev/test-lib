@@ -1,27 +1,26 @@
 /*
-Account account1 = AccountTestModule.Builder().withName('Test').get();
-Account account2 = AccountTestModule.Builder().withName('Test 2').insertAndGet();
+Account account1 = AccountTestModule.builder().withName('Test').build();
+Account account2 = AccountTestModule.builder().withName('Test 2').buildAndInsert();
 
-Account account3 = AccountTestModule.Mocker().withName('Test 3').with('Contacts', new List<...>()).get();
+Account account3 = AccountTestModule.mocker().withName('Test 3').setChildren('Contacts', new List<...>()).build();
 */
-public with sharing class AccountTestModule implements TestModule.Builder2, TestModule.Mocker2 {
-    public static Builder Builder() { // forced by implementation TestModule.Builder2
+public with sharing class AccountTestModule implements TestModule.BuilderProvider, TestModule.MockerProvider {
+    public static Builder builder() {
         return new Builder();
     }
 
-    public static Mocker Mocker() { // forced by implementation TestModule.Mocker2
+    public static Mocker mocker() {
         return new Mocker();
     }
 
-    public class Builder extends TestModule.Builder implements TestModule.Builder, TestModule.Randomizer, TestModule.Template {
+    public class Builder extends TestModule.Builder implements TestModule.IBuilder, TestModule.IRandomizer, TestModule.IVariant {
         public Builder() {
             super(
                 new Account(
                     Name = 'Test Account'
-                    // defaults fields
+                    // default fields
                 )
             );
-            setRandom(Account.Name, 'REGEXP_OR_EXPRESSION EG. ACCOUCT-{0}');
         }
 
         public Builder withName(String name) {
@@ -34,7 +33,6 @@ public with sharing class AccountTestModule implements TestModule.Builder2, Test
             return this;
         }
 
-        // forced by implementation TestModule.Randomizer
         public Map<SObjectField, Object> randomize(Integer index) {
             List<String> industries = new List<String>{ 'Technology', 'Finance', 'Healthcare', 'Education', 'Government', 'Other' };
             List<String> names = new List<String>{ 'Test Account', 'Test Account 2', 'Test Account 3', 'Test Account 4', 'Test Account 5', 'Test Account 6' };
@@ -45,11 +43,11 @@ public with sharing class AccountTestModule implements TestModule.Builder2, Test
             };
         }
 
-        public Map<String, Account> templates() {
-            return new Map<String, Account>{
+        public Map<String, SObject> variants() {
+            return new Map<String, SObject>{
                 'default' => new Account(
                     Name = 'Test Account'
-                    // defaults fields
+                    // default fields
                 ),
                 'enterprise' => new Account(
                     Name = 'Test Account',
@@ -59,18 +57,28 @@ public with sharing class AccountTestModule implements TestModule.Builder2, Test
         }
     }
 
-    public class Mocker extends TestModule.Mocker implements TestModule.Mocker, TestModule.Randomizer {
+    public class Mocker extends TestModule.Mocker implements TestModule.IMocker, TestModule.IRandomizer {
         public Mocker() {
             super(
                 new Account(
                     Name = 'Test Account'
-                    // defaults fields
+                    // default fields
                 )
             );
         }
 
         public Mocker withName(String name) {
             this.set(Account.Name, name);
+            return this;
+        }
+
+        public Mocker withIndustry(String industry) {
+            this.set(Account.Industry, industry);
+            return this;
+        }
+
+        public Mocker withContacts(List<Contact> contacts) {
+            this.setChildren('Contacts', contacts);
             return this;
         }
 
@@ -87,7 +95,6 @@ public with sharing class AccountTestModule implements TestModule.Builder2, Test
                 Account.BillingState => 'CA',
                 Account.BillingCountry => 'USA',
                 Account.BillingPostalCode => '10001',
-                Account.BillingStreet => '123 Main St',
                 Account.BillingStreet => '123 Main St'
             };
         }
