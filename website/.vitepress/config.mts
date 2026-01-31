@@ -1,10 +1,9 @@
 import { defineConfig } from "vitepress";
 
-// https://vitepress.dev/reference/site-config
 export default defineConfig({
-  title: "Salesforce Template",
-  description:
-    "Professional Salesforce development template with CI/CD, testing, and best practices",
+  title: "Test Lib",
+  description: "Template",
+  base: "/",
   head: [
     ["link", { rel: "icon", href: "/favicon.ico" }],
     // TODO: Configure Google Tag Manager
@@ -21,66 +20,52 @@ export default defineConfig({
     //   gtag('config', 'YOUR-GTM-ID');`
     // ]
   ],
-  base: "/template/",
-  outDir: "../dist/docs",
-  sitemap: {
-    hostname: "https://beyond-the-cloud-dev.github.io/template/",
-  },
   themeConfig: {
-    // https://vitepress.dev/reference/default-theme-config
+    logo: "/logo.png",
+
     nav: [
       { text: "Home", link: "/" },
-      { text: "Documentation", link: "/introduction" },
+      { text: "Guide", link: "/getting-started" },
+      { text: "API", link: "/api" },
     ],
 
     sidebar: [
       {
-        text: "Getting Started",
+        text: "Introduction",
         items: [
-          { text: "Introduction", link: "/introduction" },
-          { text: "Quick Start", link: "/guide/getting-started" },
+          { text: "Getting Started", link: "/getting-started" },
+          { text: "Installation", link: "/installation" },
         ],
       },
       {
-        text: "Guide",
-        collapsed: false,
+        text: "Cache Types",
         items: [
-          { text: "Development", link: "/guide/development" },
-          { text: "Testing", link: "/guide/testing" },
-          { text: "Deployment", link: "/guide/deployment" },
+          { text: "Transaction Cache", link: "/caches/transaction" },
+          { text: "Org Cache", link: "/caches/org" },
+          { text: "Session Cache", link: "/caches/session" },
         ],
       },
       {
-        text: "API Reference",
-        collapsed: true,
+        text: "Usage",
         items: [
-          { text: "LWC Components", link: "/api/lwc" },
-          { text: "Apex Classes", link: "/api/apex" },
-        ],
-      },
-      {
-        text: "Examples",
-        collapsed: true,
-        items: [
-          { text: "LWC Examples", link: "/examples/lwc-examples" },
-          { text: "Apex Examples", link: "/examples/apex-examples" },
-          { text: "Best Practices", link: "/examples/best-practices" },
+          { text: "API Reference", link: "/api" },
+          { text: "Examples", link: "/examples" },
+          { text: "Best Practices", link: "/best-practices" },
         ],
       },
     ],
-    footer: {
-      message: "Released under the MIT License.",
-      copyright: "Copyright © 2025-present Beyond The Cloud Sp. z o.o.",
-    },
+
     socialLinks: [
       {
         icon: "github",
-        link: "https://github.com/beyond-the-cloud-dev/template",
-      },
-      {
-        icon: "linkedin",
-        link: "https://www.linkedin.com/company/beyondtheclouddev",
+        link: "https://github.com/beyond-the-cloud-dev/cache-manager",
       },
     ],
+
+    footer: false,
+
+    search: {
+      provider: "local",
+    },
   },
 });
