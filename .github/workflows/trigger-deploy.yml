@@ -1,0 +1,26 @@
+name: Trigger Vercel Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      message:
+        description: "Commit message (optional)"
+        required: false
+        default: "chore: trigger deployment"
+
+jobs:
+  trigger-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Create empty commit and push
+        run: |
+          git commit --allow-empty -m "${{ github.event.inputs.message }}"
+          git push
