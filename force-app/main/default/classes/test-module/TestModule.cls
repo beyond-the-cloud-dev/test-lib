@@ -80,24 +80,29 @@ public class TestModule {
     }
 
     public abstract class RecordMocker implements Mocker {
-        private SObject prototype;
+        private Map<String, Object> fields = new Map<String, Object>();
+        private Template templates;
 
         public RecordMocker(SObject prototype) {
-            this.prototype = prototype;
+            this.fields = prototype.getPopulatedFieldsAsMap();
+        }
+
+        public RecordMocker(Template templates) {
+            this(templates.defaultTemplate());
+            this.templates = templates;
         }
 
         public RecordMocker set(SObjectField field, Object value) {
-            this.prototype.put(field, value);
-            return this;
+            return this.set(field.toString(), value);
         }
 
         public RecordMocker set(String field, Object value) {
-            this.prototype.put(field, value);
+            this.fields.put(field, value);
             return this;
         }
 
         public SObject preBuild() {
-            return this.prototype;
+            return (SObject) JSON.deserialize(JSON.serialize(this.fields), SObject.class);
         }
 
         public List<SObject> build(Integer amount) {
