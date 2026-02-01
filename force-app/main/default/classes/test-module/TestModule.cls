@@ -1,17 +1,18 @@
 @IsTest
 public class TestModule {
     public interface BuilderProvider {
-        Builder builder();
+        Builder Builder();
     }
 
     public interface MockerProvider {
-        Mocker mocker();
+        Mocker Mocker();
     }
 
     public interface Builder {
         Builder set(SObjectField field, Object value);
         Builder set(String field, Object value);
         Builder useTemplate(String templateName);
+        Builder useRandomizer(Randomizer randomizer);
 
         SObject build();
         SObject buildAndInsert();
@@ -33,9 +34,14 @@ public class TestModule {
         Map<String, SObject> templates();
     }
 
+    public interface Randomizer {
+        Map<SObjectField, Object> generate(Integer index);
+    }
+
     public abstract class RecordBuilder implements Builder {
         private SObject prototype;
         private Template templates;
+        private Randomizer randomizer;
 
         public RecordBuilder(SObject prototype) {
             this.prototype = prototype;
@@ -66,6 +72,11 @@ public class TestModule {
             return this;
         }
 
+        public RecordBuilder useRandomizer(Randomizer randomizer) {
+            this.randomizer = randomizer;
+            return this;
+        }
+
         public SObject preBuild() {
             return this.prototype;
         }
@@ -79,7 +90,13 @@ public class TestModule {
             List<SObject> records = new List<SObject>();
 
             for (Integer i = 0; i < amount; i++) {
-                records.add(this.prototype.clone(false, true, false, false));
+                SObject cloned = this.prototype.clone(false, true, false, false);
+
+                // for (String field : cloned.getPopulatedFieldsAsMap().keySet()) {
+                //     cloned.put(field, randomizerValues.get(field) ?? cloned.get(field));
+                // }
+
+                records.add(cloned);
             }
 
             return records;

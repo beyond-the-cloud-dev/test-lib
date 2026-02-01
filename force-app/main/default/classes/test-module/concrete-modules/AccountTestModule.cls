@@ -1,10 +1,10 @@
 @IsTest
 public class AccountTestModule implements TestModule.BuilderProvider, TestModule.MockerProvider {
-    public static AccountBuilder builder() {
+    public static AccountBuilder Builder() {
         return new AccountBuilder();
     }
 
-    public static AccountMocker mocker() {
+    public static AccountMocker Mocker() {
         return new AccountMocker();
     }
 

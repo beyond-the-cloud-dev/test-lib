@@ -1,10 +1,10 @@
 @IsTest
 public class OpportunityTestModule implements TestModule.BuilderProvider, TestModule.MockerProvider {
-    public static OpportunityBuilder builder() {
+    public static OpportunityBuilder Builder() {
         return new OpportunityBuilder();
     }
 
-    public static OpportunityMocker mocker() {
+    public static OpportunityMocker Mocker() {
         return new OpportunityMocker();
     }
 

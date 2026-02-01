@@ -1,10 +1,10 @@
 @IsTest
 public class ContactTestModule implements TestModule.BuilderProvider, TestModule.MockerProvider {
-    public static ContactBuilder builder() {
+    public static ContactBuilder Builder() {
         return new ContactBuilder();
     }
 
-    public static ContactMocker mocker() {
+    public static ContactMocker Mocker() {
         return new ContactMocker();
     }
 
