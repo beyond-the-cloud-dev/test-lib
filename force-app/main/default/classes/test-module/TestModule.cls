@@ -1,5 +1,15 @@
 @IsTest
-public class TestModule {
+@TestVisible
+private class TestModule {
+    public class TestModuleException extends Exception {}
+
+    private static Integer fakeIdCounter = 1;
+
+    public static Id fakeId(SObjectType sot) {
+        String keyPrefix = sot.getDescribe().getKeyPrefix();
+        return Id.valueOf(keyPrefix + '0'.repeat(12 - String.valueOf(fakeIdCounter).length()) + fakeIdCounter++);
+    }
+
     public interface BuilderProvider {
         Builder Builder();
     }
@@ -24,6 +34,8 @@ public class TestModule {
         Mocker set(SObjectField field, Object value);
         Mocker set(String field, Object value);
         Mocker setChildren(String relationship, List<SObject> children);
+        Mocker setFakeId();
+        Mocker setReadOnly(String fieldPath, Object value);
 
         SObject build();
         List<SObject> build(Integer amount);
@@ -52,18 +64,26 @@ public class TestModule {
             this.templates = templates;
         }
 
-        public RecordBuilder set(SObjectField field, Object value) {
+        public virtual RecordBuilder set(SObjectField field, Object value) {
             this.prototype.put(field, value);
             return this;
         }
 
-        public RecordBuilder set(String field, Object value) {
+        public virtual RecordBuilder set(String field, Object value) {
             this.prototype.put(field, value);
             return this;
         }
 
-        public RecordBuilder useTemplate(String templateName) {
+        public virtual RecordBuilder useTemplate(String templateName) {
+            if (this.templates == null) {
+                throw new TestModuleException('Templates not configured. Use constructor with Template parameter.');
+            }
+
             SObject template = this.templates.templates().get(templateName);
+
+            if (template == null) {
+                throw new TestModuleException('Template "' + templateName + '" not found.');
+            }
 
             for (String field : template.getPopulatedFieldsAsMap().keySet()) {
                 this.prototype.put(field, template.get(field));
@@ -72,7 +92,7 @@ public class TestModule {
             return this;
         }
 
-        public RecordBuilder useRandomizer(Randomizer randomizer) {
+        public virtual RecordBuilder useRandomizer(Randomizer randomizer) {
             this.randomizer = randomizer;
             return this;
         }
@@ -115,6 +135,7 @@ public class TestModule {
 
     public abstract class RecordMocker implements Mocker {
         private Map<String, Object> fields = new Map<String, Object>();
+        private Map<String, Object> readOnlyFields = new Map<String, Object>();
         private Map<String, List<SObject>> children = new Map<String, List<SObject>>();
         private Template templates;
 
@@ -130,17 +151,27 @@ public class TestModule {
             this.templates = templates;
         }
 
-        public RecordMocker set(SObjectField field, Object value) {
+        public virtual RecordMocker set(SObjectField field, Object value) {
             return this.set(field.toString(), value);
         }
 
-        public RecordMocker set(String field, Object value) {
+        public virtual RecordMocker set(String field, Object value) {
             this.fields.put(field, value);
             return this;
         }
 
-        public RecordMocker setChildren(String relationship, List<SObject> records) {
+        public virtual RecordMocker setChildren(String relationship, List<SObject> records) {
             this.children.put(relationship, records);
+            return this;
+        }
+
+        public virtual RecordMocker setFakeId() {
+            this.readOnlyFields.put('Id', TestModule.fakeId(this.prototypeType));
+            return this;
+        }
+
+        public virtual RecordMocker setReadOnly(String fieldPath, Object value) {
+            this.readOnlyFields.put(fieldPath, value);
             return this;
         }
 
@@ -148,38 +179,54 @@ public class TestModule {
             Map<String, Object> record = new Map<String, Object>();
 
             this.setNested(record);
+            this.setReadOnlyFields(record);
             this.setChildren(record);
 
             return (SObject) JSON.deserialize(JSON.serialize(record), Type.forName(this.prototypeType.toString()));
         }
 
         public List<SObject> build(Integer amount) {
-            return new List<SObject>();
+            List<SObject> records = new List<SObject>();
+            for (Integer i = 0; i < amount; i++) {
+                records.add(this.build());
+            }
+            return records;
         }
 
         private void setNested(Map<String, Object> record) {
             for (String fieldPath : this.fields.keySet()) {
-                List<String> parts = fieldPath.split('\\.');
+                this.setNestedValue(record, fieldPath, this.fields.get(fieldPath));
+            }
+        }
 
-                for (Integer i = 0; i < parts.size() - 1; i++) {
-                    String part = parts[i];
+        private void setReadOnlyFields(Map<String, Object> record) {
+            for (String fieldPath : this.readOnlyFields.keySet()) {
+                this.setNestedValue(record, fieldPath, this.readOnlyFields.get(fieldPath));
+            }
+        }
 
-                    if (!record.containsKey(part) || record.get(part) == null) {
-                        record.put(part, new Map<String, Object>());
-                    }
+        private void setNestedValue(Map<String, Object> record, String fieldPath, Object value) {
+            List<String> parts = fieldPath.split('\\.');
+            Map<String, Object> current = record;
 
-                    record = (Map<String, Object>) record.get(part);
+            for (Integer i = 0; i < parts.size() - 1; i++) {
+                String part = parts[i];
+
+                if (!current.containsKey(part) || current.get(part) == null) {
+                    current.put(part, new Map<String, Object>());
                 }
 
-                record.put(parts[parts.size() - 1], this.fields.get(fieldPath));
+                current = (Map<String, Object>) current.get(part);
             }
+
+            current.put(parts[parts.size() - 1], value);
         }
 
         private void setChildren(Map<String, Object> record) {
             for (String relationship : this.children.keySet()) {
-                List<SObject> children = this.children.get(relationship);
+                List<SObject> childRecords = this.children.get(relationship);
 
-                record.put(relationship, new Map<String, Object>{ 'totalSize' => children.size(), 'done' => true, 'records' => JSON.deserializeUntyped(JSON.serialize(children)) });
+                record.put(relationship, new Map<String, Object>{ 'totalSize' => childRecords.size(), 'done' => true, 'records' => JSON.deserializeUntyped(JSON.serialize(childRecords)) });
             }
         }
     }
