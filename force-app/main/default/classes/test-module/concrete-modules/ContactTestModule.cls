@@ -3,22 +3,50 @@ public with sharing class ContactTestModule implements TestModule.BuilderProvide
         return new ContactBuilder();
     }
 
-    public static ContactMocker mocker() {
-        return new ContactMocker();
+    public static Mocker mocker() {
+        return new Mocker();
     }
 
-    public class ContactBuilder extends TestModule.Builder {
+    public interface Builder {
+        Builder withFirstName(String firstName);
+        Builder withLastName(String lastName);
+        // templates
+        Builder enterprise();
+        Builder personal();
+        // build
+        Contact build();
+    }
+
+    // Inner implementations
+
+    public class ContactBuilder extends TestModule.RecordBuilder implements Builder {
         public ContactBuilder() {
-            super(new ContactTemplates());
+            super(new Templates());
         }
 
-        public ContactBuilder enterprise() {
-            this.useTemplate('business');
+        public ContactBuilder withFirstName(String firstName) {
+            return with(Contact.FirstName, firstName);
+        }
+
+        public ContactBuilder withLastName(String lastName) {
+            return with(Contact.LastName, lastName);
+        }
+
+        public ContactBuilder with(SObjectField field, Object value) {
+            super.set(field, value);
             return this;
         }
 
+        public ContactBuilder enterprise() {
+            return this.withTemplate('business');
+        }
+
         public ContactBuilder personal() {
-            this.useTemplate('personal');
+            return this.withTemplate('personal');
+        }
+
+        public ContactBuilder withTemplate(String templateName) {
+            super.useTemplate(templateName);
             return this;
         }
 
@@ -27,8 +55,8 @@ public with sharing class ContactTestModule implements TestModule.BuilderProvide
         }
     }
 
-    public class ContactMocker extends TestModule.Mocker {
-        public ContactMocker() {
+    public class Mocker extends TestModule.RecordMocker {
+        public Mocker() {
             super(new Contact(FirstName = 'Test', LastName = 'Contact', Email = 'test.contact@example.com'));
         }
 
@@ -37,7 +65,7 @@ public with sharing class ContactTestModule implements TestModule.BuilderProvide
         }
     }
 
-    public class ContactTemplates implements TestModule.Template {
+    public class Templates implements TestModule.Template {
         public SObject defaultTemplate() {
             return new Contact(FirstName = 'Test', LastName = 'Contact', Email = 'test.contact@example.com');
         }

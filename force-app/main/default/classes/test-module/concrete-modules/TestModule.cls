@@ -1,23 +1,26 @@
 public with sharing class TestModule {
     public interface BuilderProvider {
-        IBuilder builder();
+        Builder builder();
     }
 
     public interface MockerProvider {
-        IMocker mocker();
+        Mocker mocker();
     }
 
-    public interface IBuilder {
-        IBuilder set(SObjectField field, Object value);
-        IBuilder set(String field, Object value);
-        IBuilder useTemplate(String templateName);
+    public interface Builder {
+        Builder set(SObjectField field, Object value);
+        Builder set(String field, Object value);
+        Builder useTemplate(String templateName);
 
         SObject build();
+        // SObject buildAndInsert();
+        // List<SObject> build(Integer amount);
+        // List<SObject> buildAndInsert(Integer amount);
     }
 
-    public interface IMocker {
-        IMocker set(SObjectField field, Object value);
-        IMocker set(String field, Object value);
+    public interface Mocker {
+        Mocker set(SObjectField field, Object value);
+        Mocker set(String field, Object value);
 
         SObject build();
     }
@@ -27,35 +30,30 @@ public with sharing class TestModule {
         Map<String, SObject> templates();
     }
 
-    public abstract class Builder implements IBuilder {
+    public abstract class RecordBuilder implements Builder {
         private SObject prototype;
         private Template templates;
 
-        public Builder(SObject prototype) {
+        public RecordBuilder(SObject prototype) {
             this.prototype = prototype;
         }
 
-        public Builder(Template templates) {
-            this.templates = templates;
-        }
-
-        public Builder withTemplate(Template templates) {
+        public RecordBuilder(Template templates) {
             this.prototype = templates.defaultTemplate();
             this.templates = templates;
-            return this;
         }
 
-        public Builder set(SObjectField field, Object value) {
+        public RecordBuilder set(SObjectField field, Object value) {
             this.prototype.put(field, value);
             return this;
         }
 
-        public Builder set(String field, Object value) {
+        public RecordBuilder set(String field, Object value) {
             this.prototype.put(field, value);
             return this;
         }
 
-        public Builder useTemplate(String templateName) {
+        public RecordBuilder useTemplate(String templateName) {
             // TODO merge, not override
             this.prototype = this.templates.templates().get(templateName);
             return this;
@@ -66,19 +64,19 @@ public with sharing class TestModule {
         }
     }
 
-    public abstract class Mocker implements IMocker {
+    public abstract class RecordMocker implements Mocker {
         private SObject prototype;
 
-        public Mocker(SObject prototype) {
+        public RecordMocker(SObject prototype) {
             this.prototype = prototype;
         }
 
-        public Mocker set(SObjectField field, Object value) {
+        public RecordMocker set(SObjectField field, Object value) {
             this.prototype.put(field, value);
             return this;
         }
 
-        public Mocker set(String field, Object value) {
+        public RecordMocker set(String field, Object value) {
             this.prototype.put(field, value);
             return this;
         }
