@@ -1,19 +1,15 @@
 public virtual class TestModule {
-
-    // Provider interfaces - implemented by test module classes (e.g., AccountTestModule)
     public interface BuilderProvider {
-        Builder builder();
+        IBuilder builder();
     }
 
     public interface MockerProvider {
-        Mocker mocker();
+        IMocker mocker();
     }
 
-    // Builder interface - defines the contract for building insertable records
     public interface IBuilder {
-        Builder set(SObjectField field, Object value);
-        Builder set(String field, Object value);
-        Builder set(SObjectField field, Builder relatedBuilder);
+        IBuilder set(SObjectField field, Object value);
+        IBuilder set(String field, Object value);
 
         SObject build();
         SObject buildAndInsert();
@@ -21,25 +17,24 @@ public virtual class TestModule {
         List<SObject> buildManyAndInsert(Integer amount);
     }
 
-    // Mocker interface - defines the contract for building non-insertable records
     public interface IMocker {
-        Mocker set(SObjectField field, Object value);
-        Mocker set(String field, Object value);
-        Mocker setChildren(String relationshipName, List<SObject> children);
+        IMocker set(SObjectField field, Object value);
+        IMocker set(String field, Object value);
+        IMocker setChildren(String relationshipName, List<SObject> children);
 
         SObject build();
         List<SObject> buildMany(Integer amount);
     }
 
-    // Randomizer interface - for generating field values based on index
     public interface IRandomizer {
         Map<SObjectField, Object> randomize(Integer index);
     }
 
-    // Variant interface - for defining named templates/variants
     public interface IVariant {
         Map<String, SObject> variants();
     }
+
+    // Implementation
 
     public abstract class Builder implements IBuilder {
         private SObject prototype;

@@ -13,7 +13,16 @@ public with sharing class AccountTestModule implements TestModule.BuilderProvide
         return new Mocker();
     }
 
-    public class Builder extends TestModule.Builder implements TestModule.IBuilder, TestModule.IRandomizer, TestModule.IVariant {
+    public interface IBuilder extends TestModule.IBuilder {
+        IBuilder withName(String name);
+        IBuilder withIndustry(String industry);
+    }
+
+    public interface IMocker extends TestModule.IMocker {
+        IMocker withContacts(List<Contact> contacts);
+    }
+
+    public class Builder extends TestModule.Builder implements IBuilder, TestModule.IBuilder, TestModule.IRandomizer, TestModule.IVariant {
         public Builder() {
             super(
                 new Account(
@@ -65,16 +74,6 @@ public with sharing class AccountTestModule implements TestModule.BuilderProvide
                     // default fields
                 )
             );
-        }
-
-        public Mocker withName(String name) {
-            this.set(Account.Name, name);
-            return this;
-        }
-
-        public Mocker withIndustry(String industry) {
-            this.set(Account.Industry, industry);
-            return this;
         }
 
         public Mocker withContacts(List<Contact> contacts) {
