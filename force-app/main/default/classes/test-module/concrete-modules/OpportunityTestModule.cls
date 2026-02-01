@@ -43,22 +43,11 @@ public class OpportunityTestModule implements TestModule.BuilderProvider, TestMo
             return this;
         }
 
-        public Opportunity build() {
-            return (Opportunity) super.preBuild();
-        }
-
-        public Opportunity buildAndInsert() {
-            return (Opportunity) super.preBuildAndInsert();
-        }
     }
 
     public class OpportunityMocker extends TestModule.RecordMocker {
         public OpportunityMocker() {
             super(new Opportunity(Name = 'Test Opportunity', StageName = 'Prospecting', CloseDate = Date.today().addDays(30)));
-        }
-
-        public Opportunity build() {
-            return (Opportunity) super.preBuild();
         }
     }
 

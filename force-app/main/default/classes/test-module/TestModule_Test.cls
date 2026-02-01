@@ -5,7 +5,7 @@ public class TestModule_Test {
     @IsTest
     static void setFieldsViaBuilder() {
         Test.startTest();
-        Account account = new AccountTestModule().Builder().withName('Test Account').withIndustry('Technology').build();
+        Account account = (Account) new AccountTestModule().Builder().withName('Test Account').withIndustry('Technology').build();
         Test.stopTest();
 
         Assert.areEqual('Test Account', account.Name);
@@ -17,7 +17,7 @@ public class TestModule_Test {
     @IsTest
     static void setFieldsViaMocker() {
         Test.startTest();
-        Account account = new AccountTestModule().Mocker().withName('Test Account').withIndustry('Technology').build();
+        Account account = (Account) new AccountTestModule().Mocker().withName('Test Account').withIndustry('Technology').build();
         Test.stopTest();
 
         Assert.areEqual('Test Account', account.Name);
@@ -60,14 +60,6 @@ public class TestModule_Test {
             super.useTemplate('startup');
             return this;
         }
-
-        public Account build() {
-            return (Account) super.preBuild();
-        }
-
-        public Account buildAndInsert() {
-            return (Account) super.preBuildAndInsert();
-        }
     }
 
     public class AccountMocker extends TestModule.RecordMocker {
@@ -93,10 +85,6 @@ public class TestModule_Test {
         public AccountMocker withParentName(String parentName) {
             super.set('Parent.Name', parentName);
             return this;
-        }
-
-        public Account build() {
-            return (Account) super.preBuild();
         }
     }
 

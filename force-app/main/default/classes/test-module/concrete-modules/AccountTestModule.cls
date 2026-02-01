@@ -32,14 +32,6 @@ public class AccountTestModule implements TestModule.BuilderProvider, TestModule
             super.useTemplate('startup');
             return this;
         }
-
-        public Account build() {
-            return (Account) super.preBuild();
-        }
-
-        public Account buildAndInsert() {
-            return (Account) super.preBuildAndInsert();
-        }
     }
 
     public class AccountMocker extends TestModule.RecordMocker {
@@ -55,10 +47,6 @@ public class AccountTestModule implements TestModule.BuilderProvider, TestModule
         public AccountMocker withParentName(String parentName) {
             super.set('Parent.Name', parentName);
             return this;
-        }
-
-        public Account build() {
-            return (Account) super.preBuild();
         }
     }
 

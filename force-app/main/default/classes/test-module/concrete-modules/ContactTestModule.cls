@@ -32,23 +32,11 @@ public class ContactTestModule implements TestModule.BuilderProvider, TestModule
             super.useTemplate('personal');
             return this;
         }
-
-        public Contact build() {
-            return (Contact) super.preBuild();
-        }
-
-        public Contact buildAndInsert() {
-            return (Contact) super.preBuildAndInsert();
-        }
     }
 
     public class ContactMocker extends TestModule.RecordMocker {
         public ContactMocker() {
             super(new Contact(FirstName = 'Test', LastName = 'Contact', Email = 'test.contact@example.com'));
-        }
-
-        public Contact build() {
-            return (Contact) super.preBuild();
         }
     }
 

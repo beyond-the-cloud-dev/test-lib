@@ -77,11 +77,11 @@ public class TestModule {
             return this;
         }
 
-        public SObject preBuild() {
+        public SObject build() {
             return this.prototype;
         }
 
-        public SObject preBuildAndInsert() {
+        public SObject buildAndInsert() {
             insert as system this.prototype;
             return this.prototype;
         }
@@ -93,7 +93,7 @@ public class TestModule {
                 SObject cloned = this.prototype.clone(false, true, false, false);
 
                 Map<SObjectField, Object> randomizerValues = this.randomizer?.generate(i) ?? new Map<SObjectField, Object>();
-                
+
                 for (SObjectField field : randomizerValues.keySet()) {
                     cloned.put(field, randomizerValues.get(field) ?? cloned.get(field));
                 }
@@ -144,7 +144,7 @@ public class TestModule {
             return this;
         }
 
-        public SObject preBuild() {
+        public SObject build() {
             Map<String, Object> record = new Map<String, Object>();
 
             this.setNested(record);
