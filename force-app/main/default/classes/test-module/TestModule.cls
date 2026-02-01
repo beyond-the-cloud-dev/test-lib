@@ -127,7 +127,7 @@ public class TestModule {
         private void setNested(Map<String, Object> record) {
             for (String fieldPath : this.fields.keySet()) {
                 List<String> parts = fieldPath.split('\\.');
-        
+
                 for (Integer i = 0; i < parts.size() - 1; i++) {
                     String part = parts[i];
 
@@ -137,7 +137,7 @@ public class TestModule {
 
                     record = (Map<String, Object>) record.get(part);
                 }
-        
+
                 record.put(parts[parts.size() - 1], this.fields.get(fieldPath));
             }
         }
@@ -146,11 +146,7 @@ public class TestModule {
             for (String relationship : this.children.keySet()) {
                 List<SObject> children = this.children.get(relationship);
 
-                record.put(relationship, new Map<String, Object>{
-                    'totalSize' => children.size(),
-                    'done' => true,
-                    'records' => JSON.deserializeUntyped(JSON.serialize(children))
-                });
+                record.put(relationship, new Map<String, Object>{ 'totalSize' => children.size(), 'done' => true, 'records' => JSON.deserializeUntyped(JSON.serialize(children)) });
             }
         }
     }
