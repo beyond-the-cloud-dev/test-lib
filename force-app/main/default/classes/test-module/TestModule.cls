@@ -1,104 +1,102 @@
-public virtual class TestModule {
+@IsTest
+public class TestModule {
     public interface BuilderProvider {
-        IBuilder builder();
+        Builder builder();
     }
 
     public interface MockerProvider {
-        IMocker mocker();
+        Mocker mocker();
     }
 
-    public interface IBuilder {
-        IBuilder set(SObjectField field, Object value);
-        IBuilder set(String field, Object value);
+    public interface Builder {
+        Builder set(SObjectField field, Object value);
+        Builder set(String field, Object value);
+        Builder useTemplate(String templateName);
 
         SObject build();
         SObject buildAndInsert();
-        List<SObject> buildMany(Integer amount);
-        List<SObject> buildManyAndInsert(Integer amount);
+        List<SObject> build(Integer amount);
+        List<SObject> buildAndInsert(Integer amount);
     }
 
-    public interface IMocker {
-        IMocker set(SObjectField field, Object value);
-        IMocker set(String field, Object value);
-        IMocker setChildren(String relationshipName, List<SObject> children);
+    public interface Mocker {
+        Mocker set(SObjectField field, Object value);
+        Mocker set(String field, Object value);
 
         SObject build();
-        List<SObject> buildMany(Integer amount);
     }
 
-    public interface IRandomizer {
-        Map<SObjectField, Object> randomize(Integer index);
+    public interface Template {
+        SObject defaultTemplate();
+        Map<String, SObject> templates();
     }
 
-    public interface IVariant {
-        Map<String, SObject> variants();
-    }
-
-    // Implementation
-
-    public abstract class Builder implements IBuilder {
+    public abstract class RecordBuilder implements Builder {
         private SObject prototype;
+        private Template templates;
 
-        public Builder(SObject prototype) {
+        public RecordBuilder(SObject prototype) {
             this.prototype = prototype;
         }
 
-        public Builder set(SObjectField field, Object value) {
+        public RecordBuilder(Template templates) {
+            this.prototype = templates.defaultTemplate();
+            this.templates = templates;
+        }
+
+        public RecordBuilder set(SObjectField field, Object value) {
             this.prototype.put(field, value);
             return this;
         }
 
-        public Builder set(String field, Object value) {
+        public RecordBuilder set(String field, Object value) {
             this.prototype.put(field, value);
             return this;
         }
 
-        public SObject build() {
+        public RecordBuilder useTemplate(String templateName) {
+            // TODO merge, not override
+            this.prototype = this.templates.templates().get(templateName);
+            return this;
+        }
+
+        public SObject preBuild() {
             return this.prototype;
         }
 
-        public SObject buildAndInsert() {
+        public SObject preBuildAndInsert() {
             insert as system this.prototype;
             return this.prototype;
         }
 
-        public List<SObject> buildMany(Integer amount) {
+        public List<SObject> build(Integer amount) {
             return new List<SObject>();
         }
 
-        public List<SObject> buildManyAndInsert(Integer amount) {
+        public List<SObject> buildAndInsert(Integer amount) {
             return new List<SObject>();
         }
     }
 
-    public abstract class Mocker implements IMocker {
+    public abstract class RecordMocker implements Mocker {
         private SObject prototype;
 
-        public Mocker(SObject prototype) {
+        public RecordMocker(SObject prototype) {
             this.prototype = prototype;
         }
 
-        public Mocker set(SObjectField field, Object value) {
+        public RecordMocker set(SObjectField field, Object value) {
             this.prototype.put(field, value);
             return this;
         }
 
-        public Mocker set(String field, Object value) {
+        public RecordMocker set(String field, Object value) {
             this.prototype.put(field, value);
             return this;
         }
 
-        public Mocker setChildren(String relationshipName, List<SObject> children) {
-            this.prototype.put(relationshipName, children);
-            return this;
-        }
-
-        public SObject build() {
+        public SObject preBuild() {
             return this.prototype;
-        }
-
-        public List<SObject> buildMany(Integer amount) {
-            return new List<SObject>();
         }
     }
 }

@@ -1,62 +1,49 @@
-public with sharing class ContactTestModule implements TestModule.BuilderProvider, TestModule.MockerProvider {
+@IsTest
+public class ContactTestModule implements TestModule.BuilderProvider, TestModule.MockerProvider {
     public static ContactBuilder builder() {
         return new ContactBuilder();
     }
 
-    public static Mocker mocker() {
-        return new Mocker();
+    public static ContactMocker mocker() {
+        return new ContactMocker();
     }
 
-    public interface Builder {
-        Builder withFirstName(String firstName);
-        Builder withLastName(String lastName);
-        // templates
-        Builder enterprise();
-        Builder personal();
-        // build
-        Contact build();
-    }
-
-    // Inner implementations
-
-    public class ContactBuilder extends TestModule.RecordBuilder implements Builder {
+    public class ContactBuilder extends TestModule.RecordBuilder {
         public ContactBuilder() {
             super(new Templates());
         }
 
         public ContactBuilder withFirstName(String firstName) {
-            return with(Contact.FirstName, firstName);
-        }
-
-        public ContactBuilder withLastName(String lastName) {
-            return with(Contact.LastName, lastName);
-        }
-
-        public ContactBuilder with(SObjectField field, Object value) {
-            super.set(field, value);
+            super.set(Contact.FirstName, firstName);
             return this;
         }
 
-        public ContactBuilder enterprise() {
-            return this.withTemplate('business');
+        public ContactBuilder withLastName(String lastName) {
+            super.set(Contact.LastName, lastName);
+            return this;
+        }
+
+        public ContactBuilder business() {
+            super.useTemplate('business');
+            return this;
         }
 
         public ContactBuilder personal() {
-            return this.withTemplate('personal');
-        }
-
-        public ContactBuilder withTemplate(String templateName) {
-            super.useTemplate(templateName);
+            super.useTemplate('personal');
             return this;
         }
 
         public Contact build() {
             return (Contact) super.preBuild();
         }
+
+        public Contact buildAndInsert() {
+            return (Contact) super.preBuildAndInsert();
+        }
     }
 
-    public class Mocker extends TestModule.RecordMocker {
-        public Mocker() {
+    public class ContactMocker extends TestModule.RecordMocker {
+        public ContactMocker() {
             super(new Contact(FirstName = 'Test', LastName = 'Contact', Email = 'test.contact@example.com'));
         }
 
