@@ -92,9 +92,11 @@ public class TestModule {
             for (Integer i = 0; i < amount; i++) {
                 SObject cloned = this.prototype.clone(false, true, false, false);
 
-                // for (String field : cloned.getPopulatedFieldsAsMap().keySet()) {
-                //     cloned.put(field, randomizerValues.get(field) ?? cloned.get(field));
-                // }
+                Map<SObjectField, Object> randomizerValues = this.randomizer?.generate(i) ?? new Map<SObjectField, Object>();
+                
+                for (SObjectField field : randomizerValues.keySet()) {
+                    cloned.put(field, randomizerValues.get(field) ?? cloned.get(field));
+                }
 
                 records.add(cloned);
             }

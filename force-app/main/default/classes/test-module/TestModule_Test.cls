@@ -1,5 +1,7 @@
 @IsTest
 public class TestModule_Test {
+    // Builder
+
     @IsTest
     static void setFieldsViaBuilder() {
         Test.startTest();
@@ -10,6 +12,8 @@ public class TestModule_Test {
         Assert.areEqual('Technology', account.Industry);
     }
 
+    // Mocker 
+
     @IsTest
     static void setFieldsViaMocker() {
         Test.startTest();
@@ -19,6 +23,8 @@ public class TestModule_Test {
         Assert.areEqual('Test Account', account.Name);
         Assert.areEqual('Technology', account.Industry);
     }
+
+    // Helper methods
 
     public class AccountTestModule implements TestModule.BuilderProvider, TestModule.MockerProvider {
         public AccountBuilder Builder() {
