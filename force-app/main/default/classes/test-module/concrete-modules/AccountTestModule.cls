@@ -1,4 +1,4 @@
-@IsTest
+// @IsTest
 public class AccountTestModule implements TestModule.BuilderProvider, TestModule.MockerProvider {
     public static AccountBuilder builder() {
         return new AccountBuilder();
@@ -45,6 +45,16 @@ public class AccountTestModule implements TestModule.BuilderProvider, TestModule
     public class AccountMocker extends TestModule.RecordMocker {
         public AccountMocker() {
             super(new Account(Name = 'Test Account', Industry = 'Technology'));
+        }
+
+        public AccountMocker withContacts(List<Contact> contacts) {
+            super.setChildren('Contacts', contacts);
+            return this;
+        }
+
+        public AccountMocker withParentName(String parentName) {
+            super.set('Parent.Name', parentName);
+            return this;
         }
 
         public Account build() {

@@ -1,4 +1,4 @@
-@IsTest
+// @IsTest
 public class TestModule {
     public interface BuilderProvider {
         Builder builder();
@@ -22,6 +22,7 @@ public class TestModule {
     public interface Mocker {
         Mocker set(SObjectField field, Object value);
         Mocker set(String field, Object value);
+        Mocker setChildren(String relationship, List<SObject> children);
 
         SObject build();
         List<SObject> build(Integer amount);
@@ -81,10 +82,14 @@ public class TestModule {
 
     public abstract class RecordMocker implements Mocker {
         private Map<String, Object> fields = new Map<String, Object>();
+        private Map<String, List<SObject>> children = new Map<String, List<SObject>>();
         private Template templates;
 
+        private SObjectType prototypeType;
+
         public RecordMocker(SObject prototype) {
-            this.fields = prototype.getPopulatedFieldsAsMap();
+            this.fields = prototype.getPopulatedFieldsAsMap().clone();
+            this.prototypeType = prototype.getSObjectType();
         }
 
         public RecordMocker(Template templates) {
@@ -101,12 +106,52 @@ public class TestModule {
             return this;
         }
 
+        public RecordMocker setChildren(String relationship, List<SObject> records) {
+            this.children.put(relationship, records);
+            return this;
+        }
+
         public SObject preBuild() {
-            return (SObject) JSON.deserialize(JSON.serialize(this.fields), SObject.class);
+            Map<String, Object> record = new Map<String, Object>();
+
+            this.setNested(record);
+            this.setChildren(record);
+
+            return (SObject) JSON.deserialize(JSON.serialize(record), Type.forName(this.prototypeType.toString()));
         }
 
         public List<SObject> build(Integer amount) {
             return new List<SObject>();
+        }
+
+        private void setNested(Map<String, Object> record) {
+            for (String fieldPath : this.fields.keySet()) {
+                List<String> parts = fieldPath.split('\\.');
+        
+                for (Integer i = 0; i < parts.size() - 1; i++) {
+                    String part = parts[i];
+
+                    if (!record.containsKey(part) || record.get(part) == null) {
+                        record.put(part, new Map<String, Object>());
+                    }
+
+                    record = (Map<String, Object>) record.get(part);
+                }
+        
+                record.put(parts[parts.size() - 1], this.fields.get(fieldPath));
+            }
+        }
+
+        private void setChildren(Map<String, Object> record) {
+            for (String relationship : this.children.keySet()) {
+                List<SObject> children = this.children.get(relationship);
+
+                record.put(relationship, new Map<String, Object>{
+                    'totalSize' => children.size(),
+                    'done' => true,
+                    'records' => JSON.deserializeUntyped(JSON.serialize(children))
+                });
+            }
         }
     }
 }
