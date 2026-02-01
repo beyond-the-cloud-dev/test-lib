@@ -57,8 +57,12 @@ public class TestModule {
         }
 
         public RecordBuilder useTemplate(String templateName) {
-            // TODO merge, not override
-            this.prototype = this.templates.templates().get(templateName);
+            SObject template = this.templates.templates().get(templateName);
+
+            for (String field : template.getPopulatedFieldsAsMap().keySet()) {
+                this.prototype.put(field, template.get(field));
+            }
+
             return this;
         }
 
@@ -83,7 +87,7 @@ public class TestModule {
 
         public List<SObject> buildAndInsert(Integer amount) {
             List<SObject> records = this.build(amount);
-            
+
             insert as system records;
 
             return records;
