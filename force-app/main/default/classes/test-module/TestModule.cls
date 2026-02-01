@@ -24,6 +24,7 @@ public class TestModule {
         Mocker set(String field, Object value);
 
         SObject build();
+        List<SObject> build(Integer amount);
     }
 
     public interface Template {
@@ -97,6 +98,10 @@ public class TestModule {
 
         public SObject preBuild() {
             return this.prototype;
+        }
+
+        public List<SObject> build(Integer amount) {
+            return new List<SObject>();
         }
     }
 }
