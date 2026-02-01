@@ -1,4 +1,4 @@
-// @IsTest
+@IsTest
 public class AccountTestModule implements TestModule.BuilderProvider, TestModule.MockerProvider {
     public static AccountBuilder builder() {
         return new AccountBuilder();

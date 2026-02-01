@@ -1,4 +1,4 @@
-// @IsTest
+@IsTest
 public class TestModule {
     public interface BuilderProvider {
         Builder builder();
@@ -72,11 +72,21 @@ public class TestModule {
         }
 
         public List<SObject> build(Integer amount) {
-            return new List<SObject>();
+            List<SObject> records = new List<SObject>();
+
+            for (Integer i = 0; i < amount; i++) {
+                records.add(this.prototype.clone(false, true, false, false));
+            }
+
+            return records;
         }
 
         public List<SObject> buildAndInsert(Integer amount) {
-            return new List<SObject>();
+            List<SObject> records = this.build(amount);
+            
+            insert as system records;
+
+            return records;
         }
     }
 
