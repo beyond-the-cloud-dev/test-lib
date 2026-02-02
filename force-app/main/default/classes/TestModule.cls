@@ -251,15 +251,7 @@ private class TestModule {
             Map<String, Object> record = new Map<String, Object>();
 
             this.setNested(record);
-
-            Map<SObjectField, Object> randomizerValues = this.randomizer.generate(index);
-            for (SObjectField field : randomizerValues.keySet()) {
-                Object value = randomizerValues.get(field);
-                if (value != null) {
-                    record.put(field.toString(), value);
-                }
-            }
-
+            this.randomizeFieldsValues(record);
             this.setChildren(record);
 
             return (SObject) JSON.deserialize(JSON.serialize(record), Type.forName(this.prototypeType.toString()));
@@ -268,6 +260,20 @@ private class TestModule {
         private void setNested(Map<String, Object> record) {
             for (String fieldPath : this.fields.keySet()) {
                 this.setNestedValue(record, fieldPath, this.fields.get(fieldPath));
+            }
+        }
+
+        public void randomizeFieldsValues(Map<String, Object> record) {
+            Map<SObjectField, Object> randomizerValues = this.randomizer.generate(0);
+
+            for (SObjectField field : randomizerValues.keySet()) {
+                Object value = randomizerValues.get(field);
+
+                if (value == null) {
+                    continue;
+                }
+
+                record.put(field.toString(), value);
             }
         }
 
