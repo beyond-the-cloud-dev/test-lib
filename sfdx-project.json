@@ -5,8 +5,8 @@
       "versionNumber": "1.0.0.NEXT",
       "path": "force-app",
       "default": true,
-      "package": "Package Name Lib",
-      "versionDescription": ""
+      "package": "Test Lib",
+      "versionDescription": "Apex test data builder library with Builder and Mocker patterns for creating test records"
     }
   ],
   "name": "BeyondTheCloud",

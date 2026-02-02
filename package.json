@@ -1,8 +1,8 @@
 {
-  "name": "salesforce-repo",
+  "name": "test-lib",
   "private": true,
   "version": "1.0.0",
-  "description": "Salesforce Repo",
+  "description": "Apex test data builder library with Builder and Mocker patterns for creating test records in Salesforce",
   "scripts": {
     "lint": "eslint **/{aura,lwc}/**",
     "test": "npm run test:unit",

@@ -1,144 +1,197 @@
 # Getting Started
 
-Learn how to use Test Lib in your Salesforce org.
+Learn how to use Test Lib in your Salesforce Apex tests.
 
 ## What is Test Lib?
 
-Test Lib provides a simplified, unified interface for Salesforce Platform Cache. It supports:
+Test Lib is a fluent test data builder library for Salesforce Apex. It provides two complementary patterns:
 
-- **Transaction Cache** - In-memory cache for single transaction
-- **Org Cache** - Persistent cache shared across org
-- **Session Cache** - Persistent cache scoped to user session
+- **Builder** - Create real SObject records for database insertion
+- **Mocker** - Create in-memory SObjects without DML operations
 
-All three use the same simple API.
+Both patterns use fluent APIs with method chaining for clean, readable test code.
 
 ## Installation
 
 See the [Installation Guide](/installation) for setup instructions.
 
+## Core Concepts
+
+### 1. Test Module Classes
+
+Create a Test Module class for each SObject you want to build:
+
+```apex
+@IsTest
+public class AccountTestModule implements TestModule.BuilderProvider, TestModule.MockerProvider {
+    public static AccountBuilder Builder() {
+        return new AccountBuilder();
+    }
+
+    public static AccountMocker Mocker() {
+        return new AccountMocker();
+    }
+
+    // Builder and Mocker implementations...
+}
+```
+
+### 2. Builder Pattern
+
+Use `Builder` when you need records in the database:
+
+```apex
+@IsTest
+static void testWithRealRecords() {
+    // Create single record
+    Account acc = (Account) AccountTestModule.Builder()
+        .withName('Acme Corp')
+        .withIndustry('Technology')
+        .buildAndInsert();
+
+    // Create multiple records
+    List<Account> accounts = AccountTestModule.Builder()
+        .withAccountRandomizer()
+        .buildAndInsert(10);
+
+    // Records have real IDs and are in the database
+    System.assertNotEquals(null, acc.Id);
+}
+```
+
+### 3. Mocker Pattern
+
+Use `Mocker` when you need records without DML (faster unit tests):
+
+```apex
+@IsTest
+static void testWithMockedRecords() {
+    // Create in-memory record with fake ID
+    Account acc = (Account) AccountTestModule.Mocker()
+        .setFakeId()
+        .build();
+
+    // Mock parent relationships
+    Account accWithParent = (Account) AccountTestModule.Mocker()
+        .withParentName('Parent Corp')
+        .build();
+
+    // Mock child relationships
+    List<Contact> contacts = ContactTestModule.Mocker().build(3);
+    Account accWithContacts = (Account) AccountTestModule.Mocker()
+        .withContacts(contacts)
+        .build();
+}
+```
+
 ## Basic Usage
 
-### Transaction Cache
-
-Cache data for the duration of a transaction:
+### Creating a Simple Builder
 
 ```apex
-// Store in cache
-CacheManager.ApexTransaction.put('currentUser', currentUser);
-
-// Retrieve from cache
-User user = (User) CacheManager.ApexTransaction.get('currentUser');
-
-// Check if exists
-if (CacheManager.ApexTransaction.contains('currentUser')) {
-    // Use cached data
-}
-
-// Remove from cache
-CacheManager.ApexTransaction.remove('currentUser');
-```
-
-### Org Cache
-
-Cache data persistently across the org:
-
-```apex
-// Store in org cache
-CacheManager.DefaultOrgCache.put('settings', orgSettings);
-
-// Retrieve from org cache
-Settings__c settings = (Settings__c) CacheManager.DefaultOrgCache.get('settings');
-```
-
-### Session Cache
-
-Cache data for a user session:
-
-```apex
-// Store in session cache
-CacheManager.DefaultSessionCache.put('preferences', userPrefs);
-
-// Retrieve from session cache
-Map<String, Object> prefs = (Map<String, Object>)
-    CacheManager.DefaultSessionCache.get('preferences');
-```
-
-## Common Use Cases
-
-### Avoid Redundant SOQL
-
-```apex
-public User getCurrentUser() {
-    String userId = UserInfo.getUserId();
-
-    // Check cache first
-    if (CacheManager.ApexTransaction.contains(userId)) {
-        return (User) CacheManager.ApexTransaction.get(userId);
+public class AccountBuilder extends TestModule.RecordBuilder {
+    public AccountBuilder() {
+        super(new Account(Name = 'Default Account'));
     }
 
-    // Query and cache
-    User currentUser = [SELECT Id, Name, Email FROM User WHERE Id = :userId];
-    CacheManager.ApexTransaction.put(userId, currentUser);
+    public AccountBuilder withName(String name) {
+        super.set(Account.Name, name);
+        return this;
+    }
 
-    return currentUser;
+    public AccountBuilder withIndustry(String industry) {
+        super.set(Account.Industry, industry);
+        return this;
+    }
 }
 ```
 
-### Cache Expensive Calculations
+### Creating a Simple Mocker
 
 ```apex
-public Decimal calculateTotal(List<LineItem> items) {
-    String cacheKey = 'total' + items.hashCode();
-
-    if (CacheManager.ApexTransaction.contains(cacheKey)) {
-        return (Decimal) CacheManager.ApexTransaction.get(cacheKey);
+public class AccountMocker extends TestModule.RecordMocker {
+    public AccountMocker() {
+        super(new Account(Name = 'Test Account'));
     }
 
-    Decimal total = 0;
-    for (LineItem item : items) {
-        total += item.quantity * item.price;
+    public AccountMocker withContacts(List<Contact> contacts) {
+        super.setChildren('Contacts', contacts);
+        return this;
     }
-
-    CacheManager.ApexTransaction.put(cacheKey, total);
-    return total;
 }
 ```
 
-### Cache Configuration
+## Builder Methods
+
+| Method | Description |
+|--------|-------------|
+| `set(field, value)` | Set field value using SObjectField token |
+| `set(fieldName, value)` | Set field value using String field name |
+| `useTemplate(name)` | Apply named template |
+| `withRandomizer(randomizer)` | Apply record randomizer |
+| `build()` | Build single record (no DML) |
+| `buildAndInsert()` | Build and insert single record |
+| `build(amount)` | Build multiple records (no DML) |
+| `buildAndInsert(amount)` | Build and insert multiple records |
+
+## Mocker Methods
+
+| Method | Description |
+|--------|-------------|
+| `set(field, value)` | Set field value |
+| `setChildren(relationship, records)` | Set child relationship |
+| `setFakeId()` | Generate fake ID |
+| `withRandomizer(randomizer)` | Apply randomizer |
+| `build()` | Build single mock record |
+| `build(amount)` | Build multiple mock records |
+
+## Quick Example
 
 ```apex
-public static Map<String, Object> getAppConfig() {
-    String cacheKey = 'appConfig';
+@IsTest
+private class OpportunityServiceTest {
 
-    if (CacheManager.DefaultOrgCache.contains(cacheKey)) {
-        return (Map<String, Object>) CacheManager.DefaultOrgCache.get(cacheKey);
+    @IsTest
+    static void shouldCreateOpportunityWithAccount() {
+        // Arrange
+        Account acc = (Account) AccountTestModule.Builder()
+            .enterprise()
+            .buildAndInsert();
+
+        // Act
+        Opportunity opp = (Opportunity) OpportunityTestModule.Builder()
+            .withAccount(acc.Id)
+            .withAmount(100000)
+            .buildAndInsert();
+
+        // Assert
+        System.assertEquals(acc.Id, opp.AccountId);
+        System.assertEquals(100000, opp.Amount);
     }
 
-    Map<String, Object> config = loadConfigFromCustomSettings();
-    CacheManager.DefaultOrgCache.put(cacheKey, config);
+    @IsTest
+    static void shouldCalculateExpectedRevenue() {
+        // Arrange - Use Mocker for pure unit tests
+        Opportunity opp = (Opportunity) OpportunityTestModule.Mocker()
+            .setFakeId()
+            .set(Opportunity.Amount, 100000)
+            .set(Opportunity.Probability, 75)
+            .build();
 
-    return config;
+        // Act - Test pure logic without database
+        Decimal expected = OpportunityService.calculateExpected(opp);
+
+        // Assert
+        System.assertEquals(75000, expected);
+    }
 }
-```
-
-## Key Validation
-
-Test Lib validates that keys are alphanumeric:
-
-```apex
-// ✅ Valid keys
-CacheManager.ApexTransaction.put('userId123', user);
-CacheManager.ApexTransaction.put('abc', data);
-
-// ❌ Invalid keys (throws IllegalArgumentException)
-CacheManager.ApexTransaction.put('user-id', user);    // Contains hyphen
-CacheManager.ApexTransaction.put('user.id', user);    // Contains dot
-CacheManager.ApexTransaction.put('user_id', user);    // Contains underscore
 ```
 
 ## Next Steps
 
-- Learn about [Transaction Cache](/caches/transaction)
-- Explore [Org Cache](/caches/org)
-- See [Complete Examples](/examples)
+- Learn about [Builder Pattern](/builder) in depth
+- Explore [Mocker Pattern](/mocker) for unit testing
+- See [Templates](/templates) for reusable configurations
+- Use [Randomizers](/randomizers) for bulk data generation
 - Review [API Reference](/api)
+- Check [Complete Examples](/examples)

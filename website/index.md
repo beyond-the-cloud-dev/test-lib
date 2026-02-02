@@ -3,8 +3,8 @@ layout: home
 
 hero:
   name: "Test Lib"
-  text: "Template"
-  tagline: A clean, unified interface for Salesforce Platform Cache - supporting transaction, org, and session caching with a consistent API
+  text: "Apex Test Data Builder"
+  tagline: A fluent, type-safe library for creating test data in Salesforce Apex tests using Builder and Mocker patterns
   actions:
     - theme: brand
       text: Get Started
@@ -14,141 +14,182 @@ hero:
       link: /api
     - theme: alt
       text: View on GitHub
-      link: https://github.com/beyond-the-cloud-dev/cache-manager
+      link: https://github.com/beyond-the-cloud-dev/test-lib
 
 features:
-  - icon: 🎯
-    title: Unified Interface
-    details: One consistent API for all cache types - transaction, org, and session cache with the same methods.
+  - icon: 🏗️
+    title: Builder Pattern
+    details: Create real SObject records with fluent API. Build single records or bulk insert multiple records with one call.
 
-  - icon: ⚡
-    title: Simple & Fast
-    details: Straightforward API that wraps Salesforce Platform Cache complexity with clean, easy-to-use methods.
+  - icon: 🎭
+    title: Mocker Pattern
+    details: Create in-memory SObjects without DML operations. Perfect for unit testing triggers, services, and complex logic.
 
-  - icon: 🔒
-    title: Type-Safe Keys
-    details: Automatic validation ensures cache keys are alphanumeric, preventing runtime errors.
+  - icon: 📋
+    title: Templates
+    details: Define reusable record templates for common scenarios like "enterprise account" or "startup account".
 
-  - icon: 📦
-    title: Transaction Cache
-    details: In-memory caching for the duration of a single transaction. Perfect for avoiding redundant SOQL queries.
+  - icon: 🎲
+    title: Randomizers
+    details: Generate unique field values automatically. Create 100 accounts with unique names and industries effortlessly.
 
-  - icon: 🌐
-    title: Org & Session Cache
-    details: Persistent caching across transactions using Platform Cache partitions.
+  - icon: 🔗
+    title: Parent-Child Relations
+    details: Mock complex object relationships including parent lookups and child record collections.
 
   - icon: 🚀
     title: Production Ready
-    details: Battle-tested in production. Part of Apex Fluently suite of enterprise-grade Salesforce libraries.
+    details: Battle-tested in production. Part of Beyond The Cloud suite of enterprise-grade Salesforce libraries.
 ---
 
 ## Why Test Lib?
 
-Salesforce Platform Cache is powerful but verbose. Test Lib simplifies it with a clean, consistent API:
+Creating test data in Apex is verbose and repetitive. Test Lib simplifies it with fluent, type-safe builders:
 
 ::: code-group
 
-```apex [Before ❌]
-// Platform Cache - verbose and complex
-Cache.Org orgCache = Cache.Org.getPartition('local.Default');
-orgCache.put('userId', currentUser);
-User cachedUser = (User) orgCache.get('userId');
+```apex [Before - Verbose]
+// Traditional approach - verbose and hard to maintain
+@IsTest
+static void testAccountProcessing() {
+    Account acc = new Account();
+    acc.Name = 'Test Account';
+    acc.Industry = 'Technology';
+    acc.AnnualRevenue = 1000000;
+    acc.BillingCity = 'San Francisco';
+    insert acc;
 
-// Different API for transaction cache
-Map<String, Object> transactionCache = new Map<String, Object>();
-transactionCache.put('userId', currentUser);
-User user = (User) transactionCache.get('userId');
+    Contact con = new Contact();
+    con.FirstName = 'John';
+    con.LastName = 'Doe';
+    con.AccountId = acc.Id;
+    insert con;
+
+    // Test logic...
+}
 ```
 
-```apex [After ✅]
-// Test Lib - simple and consistent
-CacheManager.DefaultOrgCache.put('userId', currentUser);
-User cachedUser = (User) CacheManager.DefaultOrgCache.get('userId');
+```apex [After - Clean]
+// Test Lib - fluent and maintainable
+@IsTest
+static void testAccountProcessing() {
+    Account acc = (Account) AccountTestModule.Builder()
+        .withName('Test Account')
+        .enterprise()
+        .buildAndInsert();
 
-// Same API for transaction cache
-CacheManager.ApexTransaction.put('userId', currentUser);
-User user = (User) CacheManager.ApexTransaction.get('userId');
+    Contact con = (Contact) ContactTestModule.Builder()
+        .withAccount(acc.Id)
+        .buildAndInsert();
+
+    // Test logic...
+}
 ```
 
 :::
 
+## Builder vs Mocker
+
+Test Lib provides two complementary patterns:
+
+### Builder - Real Records
+
+Use `Builder` when you need records in the database:
+
+```apex
+// Single record
+Account acc = (Account) AccountTestModule.Builder()
+    .withName('Acme Corp')
+    .withIndustry('Technology')
+    .buildAndInsert();
+
+// Multiple records with unique values
+List<Account> accounts = AccountTestModule.Builder()
+    .withAccountRandomizer()
+    .buildAndInsert(100);
+```
+
+### Mocker - In-Memory Records
+
+Use `Mocker` when you need records without DML (faster tests):
+
+```apex
+// Mock record with fake ID
+Account acc = (Account) AccountTestModule.Mocker()
+    .setFakeId()
+    .build();
+
+// Mock with parent relationship
+Account acc = (Account) AccountTestModule.Mocker()
+    .withParentName('Parent Corp')
+    .build();
+
+// Mock with child records
+List<Contact> contacts = ContactTestModule.Mocker().build(3);
+Account acc = (Account) AccountTestModule.Mocker()
+    .withContacts(contacts)
+    .build();
+```
+
 ## Quick Example
 
 ```apex
-// Cache user data for the transaction
-CacheManager.ApexTransaction.put(
-    UserInfo.getUserId(),
-    [SELECT Id, Name, Email FROM User WHERE Id = :UserInfo.getUserId()]
-);
+@IsTest
+private class OpportunityServiceTest {
 
-// Retrieve from cache (no SOQL query)
-User currentUser = (User) CacheManager.ApexTransaction.get(UserInfo.getUserId());
+    @IsTest
+    static void shouldCalculateExpectedRevenue() {
+        // Arrange - Create test data with Builder
+        Account acc = (Account) AccountTestModule.Builder()
+            .enterprise()
+            .buildAndInsert();
 
-// Check if key exists
-if (CacheManager.ApexTransaction.contains(UserInfo.getUserId())) {
-    // Use cached data
+        Opportunity opp = (Opportunity) OpportunityTestModule.Builder()
+            .withAccount(acc.Id)
+            .withAmount(100000)
+            .withProbability(75)
+            .buildAndInsert();
+
+        // Act
+        Decimal revenue = OpportunityService.calculateExpectedRevenue(opp.Id);
+
+        // Assert
+        Assert.areEqual(75000, revenue);
+    }
+
+    @IsTest
+    static void shouldProcessOpportunityWithMockedData() {
+        // Arrange - Use Mocker for unit tests (no DML)
+        Opportunity opp = (Opportunity) OpportunityTestModule.Mocker()
+            .setFakeId()
+            .set(Opportunity.Amount, 100000)
+            .set(Opportunity.Probability, 75)
+            .build();
+
+        // Act & Assert - Test pure logic without database
+        Decimal expected = OpportunityService.calculateExpected(opp);
+        Assert.areEqual(75000, expected);
+    }
 }
-
-// Remove from cache
-CacheManager.ApexTransaction.remove(UserInfo.getUserId());
-```
-
-## Cache Types
-
-Test Lib supports three types of caching:
-
-### Transaction Cache
-
-In-memory cache that lasts for the duration of a single transaction.
-
-```apex
-CacheManager.ApexTransaction.put('key', value);
-```
-
-### Org Cache
-
-Persistent cache shared across the entire org.
-
-```apex
-CacheManager.DefaultOrgCache.put('key', value);
-```
-
-### Session Cache
-
-Persistent cache scoped to a single user session.
-
-```apex
-CacheManager.DefaultSessionCache.put('key', value);
 ```
 
 ## Features at a Glance
 
-- ✅ **Transaction Cache** - In-memory caching for single transaction
-- ✅ **Org Cache** - Persistent org-wide caching
-- ✅ **Session Cache** - Persistent user-session caching
-- ✅ **Unified API** - Same methods across all cache types
-- ✅ **Key Validation** - Automatic alphanumeric key validation
-- ✅ **Simple Interface** - Just 5 methods: `put`, `get`, `contains`, `remove`, `getKeys`
-- ✅ **Zero Config** - Works out of the box with default partitions
+- **Builder Pattern** - Fluent API for creating real database records
+- **Mocker Pattern** - Create in-memory records without DML
+- **Templates** - Reusable record configurations
+- **Randomizers** - Generate unique field values for bulk creation
+- **Type Safety** - Compile-time field validation
+- **Parent Relations** - Mock parent lookups (e.g., `Account.Parent.Name`)
+- **Child Relations** - Mock child collections (e.g., `Account.Contacts`)
+- **Fake IDs** - Generate valid-looking IDs without database
 
-## API at a Glance
+## Part of Beyond The Cloud
 
-```apex
-interface Cacheable {
-    void put(String key, Object value);      // Store value
-    Object get(String key);                  // Retrieve value
-    Boolean contains(String key);            // Check if key exists
-    void remove(String key);                 // Remove key
-    Set<String> getKeys();                   // Get all keys
-}
-```
-
-## Part of Apex Fluently
-
-Test Lib is part of [Apex Fluently](https://apexfluently.beyondthecloud.dev/), a suite of production-ready Salesforce libraries by [Beyond the Cloud](https://beyondthecloud.dev).
+Test Lib is part of [Beyond The Cloud](https://beyondthecloud.dev) suite of production-ready Salesforce libraries.
 
 ## Get Started
 
-Ready to simplify your caching? [Get started →](/getting-started)
+Ready to simplify your test data creation? [Get started →](/getting-started)
 
-<BTCFooter context="cache-manager" />
+<BTCFooter context="test-lib" />

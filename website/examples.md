@@ -2,202 +2,420 @@
 
 Practical examples using Test Lib.
 
-## Avoid Redundant SOQL
+## Basic Builder Usage
 
-Cache query results to avoid repeated SOQL:
+### Single Record
 
 ```apex
-public class UserService {
-    public User getCurrentUser() {
-        String userId = UserInfo.getUserId();
+@IsTest
+static void testCreateAccount() {
+    Account acc = (Account) AccountTestModule.Builder()
+        .withName('Acme Corporation')
+        .withIndustry('Technology')
+        .buildAndInsert();
 
-        // Check cache first
-        if (CacheManager.ApexTransaction.contains(userId)) {
-            return (User) CacheManager.ApexTransaction.get(userId);
-        }
+    System.assertNotEquals(null, acc.Id);
+    System.assertEquals('Acme Corporation', acc.Name);
+}
+```
 
-        // Query and cache
-        User currentUser = [
-            SELECT Id, Name, Email, Profile.Name
-            FROM User
-            WHERE Id = :userId
-        ];
+### Multiple Records
 
-        CacheManager.ApexTransaction.put(userId, currentUser);
-        return currentUser;
+```apex
+@IsTest
+static void testCreateMultipleAccounts() {
+    List<Account> accounts = AccountTestModule.Builder()
+        .withIndustry('Technology')
+        .buildAndInsert(5);
+
+    System.assertEquals(5, accounts.size());
+    for (Account acc : accounts) {
+        System.assertEquals('Technology', acc.Industry);
     }
 }
 ```
 
-## Cache Expensive Calculations
+### Using Templates
 
 ```apex
-public class PricingService {
-    public Decimal calculateDiscount(List<Product> products) {
-        String cacheKey = 'discount' + products.hashCode();
+@IsTest
+static void testEnterpriseAccount() {
+    Account acc = (Account) AccountTestModule.Builder()
+        .enterprise()
+        .buildAndInsert();
 
-        if (CacheManager.ApexTransaction.contains(cacheKey)) {
-            return (Decimal) CacheManager.ApexTransaction.get(cacheKey);
-        }
+    System.assertEquals('Enterprise Account', acc.Name);
+    System.assertEquals(1000000, acc.AnnualRevenue);
+}
 
-        Decimal discount = performComplexCalculation(products);
-        CacheManager.ApexTransaction.put(cacheKey, discount);
+@IsTest
+static void testStartupAccount() {
+    Account acc = (Account) AccountTestModule.Builder()
+        .startup()
+        .buildAndInsert();
 
-        return discount;
+    System.assertEquals('Startup Account', acc.Name);
+    System.assertEquals(100000, acc.AnnualRevenue);
+}
+```
+
+## Randomizers
+
+### Single Field Randomizer
+
+```apex
+@IsTest
+static void testRandomIndustry() {
+    List<Account> accounts = AccountTestModule.Builder()
+        .withRandomIndustry()
+        .buildAndInsert(4);
+
+    // Industries cycle through: Technology, Finance, Healthcare, Retail
+    System.assertEquals('Technology', accounts[0].Industry);
+    System.assertEquals('Finance', accounts[1].Industry);
+    System.assertEquals('Healthcare', accounts[2].Industry);
+    System.assertEquals('Retail', accounts[3].Industry);
+}
+```
+
+### Record Randomizer
+
+```apex
+@IsTest
+static void testRecordRandomizer() {
+    List<Account> accounts = AccountTestModule.Builder()
+        .withAccountRandomizer()
+        .buildAndInsert(3);
+
+    // Each account has unique name and industry
+    System.assertEquals('Company 1', accounts[0].Name);
+    System.assertEquals('Company 2', accounts[1].Name);
+    System.assertEquals('Company 3', accounts[2].Name);
+}
+```
+
+### Custom Randomizer
+
+```apex
+public class EmailRandomizer implements TestModule.SingleFieldRandomizer {
+    public Object generate(Integer index) {
+        return 'user' + (index + 1) + '@example.com';
+    }
+}
+
+@IsTest
+static void testCustomRandomizer() {
+    List<Contact> contacts = ContactTestModule.Builder()
+        .withRandomizer(Contact.Email, new EmailRandomizer())
+        .buildAndInsert(3);
+
+    System.assertEquals('user1@example.com', contacts[0].Email);
+    System.assertEquals('user2@example.com', contacts[1].Email);
+    System.assertEquals('user3@example.com', contacts[2].Email);
+}
+```
+
+## Mocker Usage
+
+### Basic Mock
+
+```apex
+@IsTest
+static void testMockAccount() {
+    Account acc = (Account) AccountTestModule.Mocker()
+        .set(Account.Name, 'Mock Account')
+        .build();
+
+    // No database operation - acc.Id is null
+    System.assertEquals(null, acc.Id);
+    System.assertEquals('Mock Account', acc.Name);
+}
+```
+
+### Mock with Fake ID
+
+```apex
+@IsTest
+static void testMockWithFakeId() {
+    Account acc = (Account) AccountTestModule.Mocker()
+        .setFakeId()
+        .build();
+
+    // Has a valid-looking ID without database insert
+    System.assertNotEquals(null, acc.Id);
+    System.assert(String.valueOf(acc.Id).startsWith('001'));
+}
+```
+
+### Mock Parent Relationship
+
+```apex
+@IsTest
+static void testMockParentRelationship() {
+    Account acc = (Account) AccountTestModule.Mocker()
+        .withParentName('Parent Corporation')
+        .build();
+
+    // Parent relationship is populated
+    System.assertEquals('Parent Corporation', acc.Parent.Name);
+}
+```
+
+### Mock Child Relationships
+
+```apex
+@IsTest
+static void testMockChildRelationship() {
+    List<Contact> contacts = ContactTestModule.Mocker()
+        .set(Contact.FirstName, 'John')
+        .build(3);
+
+    Account acc = (Account) AccountTestModule.Mocker()
+        .withContacts(contacts)
+        .build();
+
+    // Child relationship is populated
+    System.assertEquals(3, acc.Contacts.size());
+}
+```
+
+## Related Records
+
+### Account with Contacts
+
+```apex
+@IsTest
+static void testAccountWithContacts() {
+    // Create Account
+    Account acc = (Account) AccountTestModule.Builder()
+        .withName('Acme Corp')
+        .buildAndInsert();
+
+    // Create related Contacts
+    List<Contact> contacts = ContactTestModule.Builder()
+        .withAccount(acc.Id)
+        .buildAndInsert(3);
+
+    // Verify
+    System.assertEquals(3, [SELECT COUNT() FROM Contact WHERE AccountId = :acc.Id]);
+}
+```
+
+### Opportunity with Account
+
+```apex
+@IsTest
+static void testOpportunityWithAccount() {
+    Account acc = (Account) AccountTestModule.Builder()
+        .enterprise()
+        .buildAndInsert();
+
+    Opportunity opp = (Opportunity) OpportunityTestModule.Builder()
+        .withAccount(acc.Id)
+        .withAmount(50000)
+        .withCloseDate(Date.today().addDays(30))
+        .buildAndInsert();
+
+    System.assertEquals(acc.Id, opp.AccountId);
+}
+```
+
+## Unit Testing with Mocker
+
+### Testing Service Logic
+
+```apex
+@IsTest
+static void testCalculateExpectedRevenue() {
+    // Create mock opportunity without database
+    Opportunity opp = (Opportunity) OpportunityTestModule.Mocker()
+        .setFakeId()
+        .set(Opportunity.Amount, 100000)
+        .set(Opportunity.Probability, 80)
+        .build();
+
+    // Test pure business logic
+    Decimal expected = RevenueCalculator.calculateExpected(opp);
+
+    System.assertEquals(80000, expected);
+}
+```
+
+### Testing Trigger Logic
+
+```apex
+@IsTest
+static void testAccountTriggerLogic() {
+    // Create mock account
+    Account oldAcc = (Account) AccountTestModule.Mocker()
+        .setFakeId()
+        .set(Account.Rating, 'Cold')
+        .build();
+
+    Account newAcc = (Account) AccountTestModule.Mocker()
+        .set(Account.Id, oldAcc.Id)
+        .set(Account.Rating, 'Hot')
+        .build();
+
+    // Test trigger logic
+    Boolean ratingChanged = AccountTriggerHandler.hasRatingChanged(oldAcc, newAcc);
+
+    System.assert(ratingChanged);
+}
+```
+
+### Testing Selector Results
+
+```apex
+@IsTest
+static void testProcessQueryResults() {
+    // Mock query results with relationships
+    List<Contact> contacts = ContactTestModule.Mocker().build(2);
+
+    Account acc = (Account) AccountTestModule.Mocker()
+        .setFakeId()
+        .withContacts(contacts)
+        .withParentName('Holding Company')
+        .build();
+
+    // Test processing logic
+    AccountDTO dto = AccountMapper.toDTO(acc);
+
+    System.assertEquals(2, dto.contactCount);
+    System.assertEquals('Holding Company', dto.parentName);
+}
+```
+
+## Template Implementation
+
+### Defining Templates
+
+```apex
+public class Templates implements TestModule.Template {
+    public SObject defaultTemplate() {
+        return new Account(
+            Name = 'Test Account',
+            Industry = 'Technology'
+        );
     }
 
-    private Decimal performComplexCalculation(List<Product> products) {
-        // Complex business logic here
-        return 0.15;
+    public Map<String, SObject> templates() {
+        return new Map<String, SObject>{
+            'enterprise' => new Account(
+                Name = 'Enterprise Account',
+                Industry = 'Technology',
+                AnnualRevenue = 1000000,
+                NumberOfEmployees = 500
+            ),
+            'startup' => new Account(
+                Name = 'Startup Account',
+                Industry = 'Technology',
+                AnnualRevenue = 100000,
+                NumberOfEmployees = 10
+            ),
+            'partner' => new Account(
+                Name = 'Partner Account',
+                Type = 'Partner',
+                Industry = 'Consulting'
+            )
+        };
     }
 }
 ```
 
-## Cache Configuration Settings
+### Using Templates
 
 ```apex
-public class ConfigService {
-    public static Map<String, Object> getAppConfig() {
-        String cacheKey = 'appConfig';
+@IsTest
+static void testTemplates() {
+    Account enterprise = (Account) AccountTestModule.Builder()
+        .enterprise()
+        .buildAndInsert();
 
-        // Check org cache
-        if (CacheManager.DefaultOrgCache.contains(cacheKey)) {
-            return (Map<String, Object>)
-                CacheManager.DefaultOrgCache.get(cacheKey);
-        }
+    Account startup = (Account) AccountTestModule.Builder()
+        .startup()
+        .buildAndInsert();
 
-        // Load from custom settings
-        Map<String, Object> config = new Map<String, Object>();
-        for (AppConfig__c setting : AppConfig__c.getAll().values()) {
-            config.put(setting.Name, setting.Value__c);
-        }
-
-        // Cache for future use
-        CacheManager.DefaultOrgCache.put(cacheKey, config);
-        return config;
-    }
+    System.assertEquals(1000000, enterprise.AnnualRevenue);
+    System.assertEquals(100000, startup.AnnualRevenue);
 }
 ```
 
-## Cache User Preferences
+## Complete Test Module Example
 
 ```apex
-public class PreferenceService {
-    public Map<String, Object> getUserPreferences() {
-        String cacheKey = 'prefs' + UserInfo.getUserId();
+@IsTest
+public class ContactTestModule implements TestModule.BuilderProvider, TestModule.MockerProvider {
 
-        if (CacheManager.DefaultSessionCache.contains(cacheKey)) {
-            return (Map<String, Object>)
-                CacheManager.DefaultSessionCache.get(cacheKey);
+    public static ContactBuilder Builder() {
+        return new ContactBuilder();
+    }
+
+    public static ContactMocker Mocker() {
+        return new ContactMocker();
+    }
+
+    public class ContactBuilder extends TestModule.RecordBuilder {
+        public ContactBuilder() {
+            super(new Templates());
         }
 
-        Map<String, Object> prefs = loadPreferencesFromDB();
-        CacheManager.DefaultSessionCache.put(cacheKey, prefs);
-
-        return prefs;
-    }
-
-    private Map<String, Object> loadPreferencesFromDB() {
-        // Load from database
-        return new Map<String, Object>();
-    }
-}
-```
-
-## Cache in Triggers
-
-```apex
-trigger AccountTrigger on Account (before update) {
-    for (Account acc : Trigger.new) {
-        // Cache account type lookups
-        String cacheKey = 'accType' + acc.Type;
-
-        if (!CacheManager.ApexTransaction.contains(cacheKey)) {
-            AccountType__mdt accType = [
-                SELECT DefaultOwner__c, SLA__c
-                FROM AccountType__mdt
-                WHERE Type__c = :acc.Type
-                LIMIT 1
-            ];
-            CacheManager.ApexTransaction.put(cacheKey, accType);
+        public ContactBuilder withFirstName(String firstName) {
+            super.set(Contact.FirstName, firstName);
+            return this;
         }
 
-        AccountType__mdt accType = (AccountType__mdt)
-            CacheManager.ApexTransaction.get(cacheKey);
+        public ContactBuilder withLastName(String lastName) {
+            super.set(Contact.LastName, lastName);
+            return this;
+        }
 
-        // Use cached metadata
-        acc.OwnerId = accType.DefaultOwner__c;
-    }
-}
-```
+        public ContactBuilder withAccount(Id accountId) {
+            super.set(Contact.AccountId, accountId);
+            return this;
+        }
 
-## Batch Apex with Caching
+        public ContactBuilder withEmail(String email) {
+            super.set(Contact.Email, email);
+            return this;
+        }
 
-```apex
-public class AccountBatch implements Database.Batchable<sObject> {
-    public Database.QueryLocator start(Database.BatchableContext bc) {
-        // Cache configuration once per batch
-        CacheManager.ApexTransaction.put('batchConfig', loadBatchConfig());
-
-        return Database.getQueryLocator([
-            SELECT Id, Name, Type
-            FROM Account
-        ]);
-    }
-
-    public void execute(Database.BatchableContext bc, List<Account> scope) {
-        // Reuse cached config
-        Map<String, Object> config = (Map<String, Object>)
-            CacheManager.ApexTransaction.get('batchConfig');
-
-        for (Account acc : scope) {
-            // Process using cached config
+        public ContactBuilder executive() {
+            super.useTemplate('executive');
+            return this;
         }
     }
 
-    public void finish(Database.BatchableContext bc) {}
+    public class ContactMocker extends TestModule.RecordMocker {
+        public ContactMocker() {
+            super(new Templates());
+        }
 
-    private Map<String, Object> loadBatchConfig() {
-        return new Map<String, Object>{'setting' => 'value'};
-    }
-}
-```
-
-## Cache Invalidation
-
-```apex
-public class CacheInvalidationService {
-    public static void invalidateUserCache(Id userId) {
-        // Remove from transaction cache
-        CacheManager.ApexTransaction.remove(userId);
-
-        // Remove from session cache
-        String sessionKey = 'user' + userId;
-        CacheManager.DefaultSessionCache.remove(sessionKey);
-    }
-
-    public static void clearAllTransactionCache() {
-        Set<String> keys = CacheManager.ApexTransaction.getKeys();
-        for (String key : keys) {
-            CacheManager.ApexTransaction.remove(key);
+        public ContactMocker withAccountName(String accountName) {
+            super.set('Account.Name', accountName);
+            return this;
         }
     }
-}
-```
 
-## Debug Cache Contents
-
-```apex
-public class CacheDebugger {
-    public static void debugTransactionCache() {
-        Set<String> keys = CacheManager.ApexTransaction.getKeys();
-
-        System.debug('=== Transaction Cache Contents ===');
-        for (String key : keys) {
-            Object value = CacheManager.ApexTransaction.get(key);
-            System.debug(key + ' => ' + value);
+    public class Templates implements TestModule.Template {
+        public SObject defaultTemplate() {
+            return new Contact(
+                FirstName = 'John',
+                LastName = 'Doe',
+                Email = 'john.doe@example.com'
+            );
         }
-        System.debug('Total keys: ' + keys.size());
+
+        public Map<String, SObject> templates() {
+            return new Map<String, SObject>{
+                'executive' => new Contact(
+                    FirstName = 'Jane',
+                    LastName = 'Smith',
+                    Title = 'CEO',
+                    Email = 'jane.smith@example.com'
+                )
+            };
+        }
     }
 }
 ```

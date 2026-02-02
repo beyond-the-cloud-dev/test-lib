@@ -1,215 +1,211 @@
 <div align="center">
-  <a href="https://beyond-the-cloud-dev.github.io/template/">
+  <a href="https://beyond-the-cloud-dev.github.io/test-lib/">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="./website/public/logo-round.png">
-      <img alt="Salesforce Template logo" src="./website/public/logo-round.png" height="98">
+      <source media="(prefers-color-scheme: dark)" srcset="./website/public/logo.png">
+      <img alt="Test Lib logo" src="./website/public/logo.png" height="98">
     </picture>
   </a>
-  <h1>Salesforce Template</h1>
+  <h1>Test Lib</h1>
 
 <a href="https://beyondthecloud.dev"><img alt="Beyond The Cloud logo" src="https://img.shields.io/badge/MADE_BY_BEYOND_THE_CLOUD-555?style=for-the-badge"></a>
 <a><img alt="API version" src="https://img.shields.io/badge/api-v65.0-blue?style=for-the-badge"></a>
-<a href="https://github.com/beyond-the-cloud-dev/template/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/badge/license-mit-green?style=for-the-badge"></a>
+<a href="https://github.com/beyond-the-cloud-dev/test-lib/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/badge/license-mit-green?style=for-the-badge"></a>
 
-[![CI](https://github.com/beyond-the-cloud-dev/template/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/beyond-the-cloud-dev/template/actions/workflows/ci.yml)
-[![Deploy Docs](https://github.com/beyond-the-cloud-dev/template/actions/workflows/deploy-docs.yml/badge.svg?branch=main)](https://github.com/beyond-the-cloud-dev/template/actions/workflows/deploy-docs.yml)
+[![CI](https://github.com/beyond-the-cloud-dev/test-lib/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/beyond-the-cloud-dev/test-lib/actions/workflows/ci.yml)
 
 </div>
 
-# Getting Started
+# Test Lib
 
-Professional Salesforce development template with CI/CD, testing, and best practices.
+Apex test data builder library with **Builder** and **Mocker** patterns for creating test records in Salesforce.
 
-This template is part of the Beyond the Cloud ecosystem, providing production-ready tools for Salesforce development.
-
-For comprehensive documentation, visit [https://beyond-the-cloud-dev.github.io/template/](https://beyond-the-cloud-dev.github.io/template/)
+For comprehensive documentation, visit [https://beyond-the-cloud-dev.github.io/test-lib/](https://beyond-the-cloud-dev.github.io/test-lib/)
 
 ## Features
 
-- **Salesforce DX Project Structure** - Modern SFDX project layout with package-based development
-- **GitHub Actions CI/CD** - Automated testing and deployment workflows
-- **LWC Jest Testing** - Comprehensive testing setup with CodeCov integration
-- **Code Quality Tools** - ESLint, Prettier, Husky pre-commit hooks
-- **Comprehensive Documentation** - VitePress-based documentation site
+- **Builder Pattern** - Fluent API for creating real database records
+- **Mocker Pattern** - Create in-memory records without DML operations
+- **Templates** - Reusable record configurations for common scenarios
+- **Randomizers** - Generate unique field values for bulk data creation
+- **Parent Relations** - Mock parent lookups (e.g., `Account.Parent.Name`)
+- **Child Relations** - Mock child collections (e.g., `Account.Contacts`)
+- **Fake IDs** - Generate valid-looking IDs without database operations
 
 ## Quick Start
 
-```bash
-# Clone the template
-git clone https://github.com/beyond-the-cloud-dev/template.git my-salesforce-project
-cd my-salesforce-project
+### Builder - Create Real Records
 
-# Install dependencies
-npm install
+```apex
+@IsTest
+static void testWithRealRecords() {
+    // Create single record
+    Account acc = (Account) AccountTestModule.Builder()
+        .withName('Acme Corp')
+        .enterprise()
+        .buildAndInsert();
 
-# Authenticate with Dev Hub
-sf org login web -d -a DevHub
+    // Create multiple records with unique values
+    List<Account> accounts = AccountTestModule.Builder()
+        .withAccountRandomizer()
+        .buildAndInsert(100);
 
-# Create scratch org
-sf org create scratch -f config/project-scratch-def.json -a my-scratch-org -d 30
-
-# Deploy source
-sf project deploy start -o my-scratch-org
-
-# Run tests
-npm test
+    System.assertNotEquals(null, acc.Id);
+    System.assertEquals(100, accounts.size());
+}
 ```
 
-## Deploy to Salesforce
+### Mocker - Create In-Memory Records
 
-<a href="https://githubsfdeploy.herokuapp.com?owner=beyond-the-cloud-dev&repo=template&ref=main">
+```apex
+@IsTest
+static void testWithMockedRecords() {
+    // Create mock with fake ID
+    Account acc = (Account) AccountTestModule.Mocker()
+        .setFakeId()
+        .build();
+
+    // Mock with parent relationship
+    Account accWithParent = (Account) AccountTestModule.Mocker()
+        .withParentName('Parent Corp')
+        .build();
+
+    // Mock with child records
+    List<Contact> contacts = ContactTestModule.Mocker().build(3);
+    Account accWithContacts = (Account) AccountTestModule.Mocker()
+        .withContacts(contacts)
+        .build();
+
+    System.assertEquals('Parent Corp', accWithParent.Parent.Name);
+    System.assertEquals(3, accWithContacts.Contacts.size());
+}
+```
+
+## Installation
+
+### Using Salesforce CLI
+
+```bash
+# Clone the repository
+git clone https://github.com/beyond-the-cloud-dev/test-lib.git
+cd test-lib
+
+# Deploy to your org
+sf project deploy start --target-org your-org-alias
+```
+
+### Deploy to Salesforce
+
+<a href="https://githubsfdeploy.herokuapp.com?owner=beyond-the-cloud-dev&repo=test-lib&ref=main">
   <img alt="Deploy to Salesforce"
        src="https://raw.githubusercontent.com/afawcett/githubsfdeploy/master/deploy.png">
 </a>
 
 ## Documentation
 
-📚 **Full documentation**: [https://beyond-the-cloud-dev.github.io/template/](https://beyond-the-cloud-dev.github.io/template/)
+Full documentation: [https://beyond-the-cloud-dev.github.io/test-lib/](https://beyond-the-cloud-dev.github.io/test-lib/)
 
 ### Documentation Sections
 
-- **[Getting Started](https://beyond-the-cloud-dev.github.io/template/guide/getting-started)** - Set up your development environment
-- **[Development Guide](https://beyond-the-cloud-dev.github.io/template/guide/development)** - Development workflow and commands
-- **[Testing Guide](https://beyond-the-cloud-dev.github.io/template/guide/testing)** - Testing framework and best practices
-- **[Deployment Guide](https://beyond-the-cloud-dev.github.io/template/guide/deployment)** - CI/CD and deployment process
-- **[API Reference](https://beyond-the-cloud-dev.github.io/template/api/lwc)** - LWC and Apex documentation
-- **[Code Examples](https://beyond-the-cloud-dev.github.io/template/examples/)** - Practical code patterns
+- **[Getting Started](https://beyond-the-cloud-dev.github.io/test-lib/getting-started)** - Introduction and setup
+- **[Builder Pattern](https://beyond-the-cloud-dev.github.io/test-lib/builder)** - Creating real database records
+- **[Mocker Pattern](https://beyond-the-cloud-dev.github.io/test-lib/mocker)** - Creating in-memory mocks
+- **[Templates](https://beyond-the-cloud-dev.github.io/test-lib/templates)** - Reusable record configurations
+- **[Randomizers](https://beyond-the-cloud-dev.github.io/test-lib/randomizers)** - Generating unique values
+- **[API Reference](https://beyond-the-cloud-dev.github.io/test-lib/api)** - Complete API documentation
+- **[Examples](https://beyond-the-cloud-dev.github.io/test-lib/examples)** - Practical code examples
 
 ### Run Documentation Locally
 
 ```bash
-# Run documentation locally
+npm install
 npm run docs:dev
-
-# Build documentation
-npm run docs:build
-
-# Preview built documentation
-npm run docs:preview
 ```
 
 ## Project Structure
 
 ```
-.
-├── force-app/              # Salesforce metadata
-│   └── main/default/
-│       ├── lwc/            # Lightning Web Components
-│       ├── aura/           # Aura components
-│       ├── classes/        # Apex classes
-│       └── ...             # Other metadata
-├── config/                 # Salesforce configurations
-│   └── project-scratch-def.json
-├── website/                # VitePress documentation
-│   ├── .vitepress/
-│   ├── guide/
-│   ├── api/
-│   └── examples/
-├── .github/workflows/      # CI/CD workflows
-│   ├── ci.yml             # Salesforce CI/CD
-│   └── deploy-docs.yml    # Documentation deployment
-├── package.json            # npm dependencies and scripts
-└── sfdx-project.json      # SFDX project configuration
+force-app/main/default/classes/test-module/
+├── TestModule.cls                    # Core framework
+├── TestModule.cls-meta.xml
+├── TestModule_Test.cls               # Framework tests
+├── TestModule_Test.cls-meta.xml
+└── concrete-modules/                 # Example implementations
+    ├── AccountTestModule.cls
+    ├── ContactTestModule.cls
+    └── OpportunityTestModule.cls
 ```
 
-## Using This Template
+## Creating a Test Module
 
-After cloning this repository, see [TODO.md](TODO.md) for a checklist of customizations needed for your project.
+```apex
+@IsTest
+public class AccountTestModule {
 
-## Available Scripts
+    public static AccountBuilder Builder() {
+        return new AccountBuilder();
+    }
 
-### Salesforce
+    public static AccountMocker Mocker() {
+        return new AccountMocker();
+    }
 
-```bash
-# Create scratch org
-sf org create scratch -f config/project-scratch-def.json -a dev
+    public class AccountBuilder extends TestModule.RecordBuilder {
+        public AccountBuilder() {
+            super(new Account(Name = 'Test Account'));
+        }
 
-# Deploy source
-sf project deploy start
+        public AccountBuilder withName(String name) {
+            super.set(Account.Name, name);
+            return this;
+        }
 
-# Run Apex tests
-sf apex run test --test-level RunLocalTests
+        public AccountBuilder withIndustry(String industry) {
+            super.set(Account.Industry, industry);
+            return this;
+        }
+    }
+
+    public class AccountMocker extends TestModule.RecordMocker {
+        public AccountMocker() {
+            super(new Account(Name = 'Test Account'));
+        }
+
+        public AccountMocker withContacts(List<Contact> contacts) {
+            super.setChildren('Contacts', contacts);
+            return this;
+        }
+    }
+}
 ```
 
-### Testing
+## Core Interfaces
 
-```bash
-npm test                    # Run all LWC Jest tests
-npm run test:unit:watch     # Watch mode
-npm run test:unit:debug     # Debug mode
-npm run test:unit:coverage  # Generate coverage report
+```apex
+// Builder - creates real records for database insertion
+public interface Builder {
+    Builder set(SObjectField field, Object value);
+    Builder useTemplate(String templateName);
+    Builder withRandomizer(Randomizer randomizer);
+    SObject build();
+    SObject buildAndInsert();
+    List<SObject> build(Integer amount);
+    List<SObject> buildAndInsert(Integer amount);
+}
+
+// Mocker - creates in-memory records without DML
+public interface Mocker {
+    Mocker set(SObjectField field, Object value);
+    Mocker setChildren(String relationship, List<SObject> children);
+    Mocker setFakeId();
+    SObject build();
+    List<SObject> build(Integer amount);
+}
 ```
-
-### Code Quality
-
-```bash
-npm run lint                # Lint LWC and Aura components
-npm run prettier            # Format all files
-npm run prettier:verify     # Check formatting
-```
-
-## CI/CD
-
-This template includes two GitHub Actions workflows:
-
-### Salesforce CI/CD
-
-Runs on every push and pull request:
-
-- Creates scratch org
-- Deploys source
-- Runs Apex tests
-- Runs LWC Jest tests
-- Uploads coverage to CodeCov
-
-### Documentation Deployment
-
-Automatically deploys documentation to GitHub Pages when changes are pushed to `website/` folder.
-
-### Required Secrets
-
-Add these secrets in GitHub repository settings:
-
-- `SFDX_AUTH_URL_DEVHUB` - Dev Hub authentication URL
-- `CODECOV_TOKEN` - CodeCov upload token (optional)
-
-See [Deployment Guide](https://beyond-the-cloud-dev.github.io/template/guide/deployment) for detailed instructions.
-
-## What's Included
-
-### Tooling
-
-- **Salesforce CLI** - Modern Salesforce development
-- **LWC Jest** - Lightning Web Component testing
-- **ESLint** - Code quality for LWC/Aura
-- **Prettier** - Code formatting
-- **Husky** - Git hooks
-- **lint-staged** - Run checks on staged files
-- **VitePress** - Documentation site generator
-
-### Configuration
-
-- Scratch org definition
-- ESLint rules for LWC/Aura
-- Prettier configuration
-- Pre-commit hooks
-- GitHub Actions workflows
-- Test coverage reporting
-
-### Documentation
-
-- Getting Started guide
-- Development workflow
-- Testing guide
-- Deployment guide
-- API reference templates
-- Code examples
-- Best practices
 
 ## Contributors
 
-<a href="https://github.com/beyond-the-cloud-dev/template/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=beyond-the-cloud-dev/template" />
+<a href="https://github.com/beyond-the-cloud-dev/test-lib/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=beyond-the-cloud-dev/test-lib" />
 </a>
 
 ## License
@@ -220,14 +216,9 @@ Copyright © 2025 Beyond The Cloud Sp. z o.o. (BeyondTheCloud.Dev)
 
 See [LICENSE](LICENSE) file for details.
 
-## License Notes
-
-- For proper license management each repository should contain LICENSE file similar to this one.
-- Each original class should contain copyright mark: © Copyright 2025, Beyond The Cloud Sp. z o.o. (BeyondTheCloud.Dev)
-
 ## About Beyond The Cloud
 
-This template is maintained by [Beyond The Cloud](https://beyondthecloud.dev) - experts in Salesforce development and DevOps.
+This library is maintained by [Beyond The Cloud](https://beyondthecloud.dev) - experts in Salesforce development.
 
 **Connect with us:**
 
@@ -237,10 +228,6 @@ This template is maintained by [Beyond The Cloud](https://beyondthecloud.dev) - 
 
 ## Support
 
-- **Documentation**: [Full documentation](https://beyond-the-cloud-dev.github.io/template/)
-- **Issues**: [GitHub Issues](https://github.com/beyond-the-cloud-dev/template/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/beyond-the-cloud-dev/template/discussions)
-
----
-
-**Note:** This is a template repository. After cloning, customize it for your project by following the [TODO.md](TODO.md) checklist.
+- **Documentation**: [Full documentation](https://beyond-the-cloud-dev.github.io/test-lib/)
+- **Issues**: [GitHub Issues](https://github.com/beyond-the-cloud-dev/test-lib/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/beyond-the-cloud-dev/test-lib/discussions)

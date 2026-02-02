@@ -1,209 +1,375 @@
 # Best Practices
 
-Guidelines for effective caching with Test Lib.
+Guidelines for effective test data creation with Test Lib.
 
-## Choose the Right Cache Type
+## Choose the Right Pattern
 
-### Transaction Cache ⚡
+### Builder - Integration Tests
 
-Use for temporary data within a single transaction:
+Use `Builder` when you need real database records:
 
-- Avoiding redundant SOQL in one transaction
-- Caching expensive calculations
-- Temporary data during processing
-
-### Org Cache 🌐
-
-Use for org-wide shared data:
-
-- Configuration settings
-- Metadata
-- Reference data used by all users
-
-### Session Cache 👤
-
-Use for user-specific persistent data:
-
-- User preferences
-- User context
-- Temporary user state
-
-## Key Naming
-
-### Use Descriptive Keys
-
-```apex
-// ✅ Good - clear and descriptive
-CacheManager.ApexTransaction.put('currentUser', user);
-CacheManager.ApexTransaction.put('accountType123', metadata);
-
-// ❌ Bad - unclear
-CacheManager.ApexTransaction.put('u', user);
-CacheManager.ApexTransaction.put('data', metadata);
-```
-
-### Include Identifiers
-
-```apex
-// ✅ Good - includes identifier
-String key = 'account' + accountId;
-CacheManager.ApexTransaction.put(key, account);
-
-// ✅ Good - unique per user
-String key = 'prefs' + UserInfo.getUserId();
-CacheManager.DefaultSessionCache.put(key, preferences);
-```
-
-### Alphanumeric Only
-
-Remember: keys must be alphanumeric.
-
-```apex
-// ✅ Valid
-CacheManager.ApexTransaction.put('userId123', user);
-
-// ❌ Invalid
-CacheManager.ApexTransaction.put('user-id', user);
-CacheManager.ApexTransaction.put('user_id', user);
-```
-
-## Check Before Getting
-
-```apex
-// ✅ Good - check first
-if (CacheManager.ApexTransaction.contains('userId')) {
-    User user = (User) CacheManager.ApexTransaction.get('userId');
-}
-
-// ❌ Inefficient - get then check null
-User user = (User) CacheManager.ApexTransaction.get('userId');
-if (user != null) {
-    // Use user
-}
-```
-
-## Cache Invalidation
-
-### Invalidate on Updates
-
-```apex
-public static void updateConfig(Map<String, Object> newConfig) {
-    saveConfig(newConfig);
-
-    // Invalidate cache
-    CacheManager.DefaultOrgCache.remove('appConfig');
-}
-```
-
-### Batch Invalidation
-
-```apex
-public static void clearUserCaches(Set<Id> userIds) {
-    for (Id userId : userIds) {
-        CacheManager.DefaultSessionCache.remove('prefs' + userId);
-    }
-}
-```
-
-## Avoid Over-Caching
-
-Don't cache data that:
-
-- Changes frequently
-- Is cheap to retrieve
-- Is rarely reused
-- Consumes significant memory
-
-```apex
-// ❌ Don't cache - changes every time
-CacheManager.ApexTransaction.put('timestamp', DateTime.now());
-
-// ❌ Don't cache - cheap to get
-CacheManager.ApexTransaction.put('userId', UserInfo.getUserId());
-
-// ✅ Do cache - expensive query
-CacheManager.ApexTransaction.put('accountWithChildren', complexQuery());
-```
-
-## Monitor Resource Usage
-
-### Transaction Cache
-
-- Uses heap space (6MB sync, 12MB async limits)
-- Clear large objects when no longer needed
-
-```apex
-// Clear when done
-CacheManager.ApexTransaction.remove('largeDataSet');
-```
-
-### Platform Cache
-
-- Monitor capacity in Setup → Platform Cache
-- Allocate appropriate storage
-- Handle cache misses gracefully
-
-## Error Handling
-
-```apex
-public User getUserSafely(Id userId) {
-    try {
-        if (CacheManager.ApexTransaction.contains(userId)) {
-            return (User) CacheManager.ApexTransaction.get(userId);
-        }
-
-        User user = [SELECT Id, Name FROM User WHERE Id = :userId];
-        CacheManager.ApexTransaction.put(userId, user);
-
-        return user;
-    } catch (Exception e) {
-        System.debug('Cache error: ' + e.getMessage());
-        // Fallback to direct query
-        return [SELECT Id, Name FROM User WHERE Id = :userId];
-    }
-}
-```
-
-## Testing
-
-### Clear Cache in Tests
+- Testing triggers and workflows
+- Testing SOQL queries
+- Testing DML operations
+- End-to-end integration tests
 
 ```apex
 @IsTest
-static void testCaching() {
-    // Arrange
-    Test.startTest();
+static void integrationTest() {
+    // Builder creates real records
+    Account acc = (Account) AccountTestModule.Builder()
+        .enterprise()
+        .buildAndInsert();
 
-    // Act
-    UserService.getUser(userId);
-    UserService.getUser(userId); // Should use cache
+    // Test actual database operations
+    acc.Rating = 'Hot';
+    update acc;
 
-    Test.stopTest();
-
-    // Assert
-    Assert.isTrue(CacheManager.ApexTransaction.contains(userId));
+    Account reloaded = [SELECT Rating FROM Account WHERE Id = :acc.Id];
+    System.assertEquals('Hot', reloaded.Rating);
 }
+```
+
+### Mocker - Unit Tests
+
+Use `Mocker` when you don't need database interaction:
+
+- Testing pure business logic
+- Testing calculations
+- Testing data transformations
+- Faster test execution
+
+```apex
+@IsTest
+static void unitTest() {
+    // Mocker creates in-memory records (no DML)
+    Account acc = (Account) AccountTestModule.Mocker()
+        .setFakeId()
+        .set(Account.AnnualRevenue, 1000000)
+        .build();
+
+    // Test pure logic without database
+    String tier = AccountClassifier.getTier(acc);
+    System.assertEquals('Enterprise', tier);
+}
+```
+
+## Design Fluent Builders
+
+### Return `this` for Chaining
+
+Always return the builder type for fluent chaining:
+
+```apex
+// Good - enables chaining
+public AccountBuilder withName(String name) {
+    super.set(Account.Name, name);
+    return this;
+}
+
+// Usage
+AccountTestModule.Builder()
+    .withName('Acme')
+    .withIndustry('Tech')
+    .enterprise()
+    .buildAndInsert();
+```
+
+### Create Semantic Methods
+
+Create methods that express business concepts:
+
+```apex
+// Good - expressive and self-documenting
+public AccountBuilder enterprise() {
+    super.useTemplate('enterprise');
+    return this;
+}
+
+public AccountBuilder active() {
+    super.set(Account.IsActive__c, true);
+    return this;
+}
+
+// Usage reads like a sentence
+AccountTestModule.Builder()
+    .enterprise()
+    .active()
+    .buildAndInsert();
+```
+
+### Group Related Fields
+
+```apex
+// Good - sets related fields together
+public OpportunityBuilder wonDeal(Decimal amount) {
+    super.set(Opportunity.StageName, 'Closed Won');
+    super.set(Opportunity.Amount, amount);
+    super.set(Opportunity.CloseDate, Date.today());
+    return this;
+}
+
+// Usage
+OpportunityTestModule.Builder()
+    .wonDeal(100000)
+    .buildAndInsert();
+```
+
+## Use Templates Effectively
+
+### Define Common Scenarios
+
+```apex
+public class Templates implements TestModule.Template {
+    public SObject defaultTemplate() {
+        return new Account(
+            Name = 'Test Account',
+            Industry = 'Technology'
+        );
+    }
+
+    public Map<String, SObject> templates() {
+        return new Map<String, SObject>{
+            // Business scenarios
+            'enterprise' => new Account(
+                Name = 'Enterprise Account',
+                AnnualRevenue = 1000000,
+                NumberOfEmployees = 500
+            ),
+            'startup' => new Account(
+                Name = 'Startup Account',
+                AnnualRevenue = 100000,
+                NumberOfEmployees = 10
+            ),
+
+            // Account types
+            'partner' => new Account(
+                Name = 'Partner Account',
+                Type = 'Partner'
+            ),
+            'prospect' => new Account(
+                Name = 'Prospect Account',
+                Type = 'Prospect',
+                Rating = 'Warm'
+            )
+        };
+    }
+}
+```
+
+### Combine Templates with Overrides
+
+```apex
+@IsTest
+static void testEnterpriseWithCustomName() {
+    Account acc = (Account) AccountTestModule.Builder()
+        .enterprise()                    // Start with template
+        .withName('Custom Corp')         // Override specific field
+        .buildAndInsert();
+
+    System.assertEquals('Custom Corp', acc.Name);
+    System.assertEquals(1000000, acc.AnnualRevenue);
+}
+```
+
+## Randomizers for Bulk Data
+
+### Use for Unique Values
+
+```apex
+@IsTest
+static void testBulkAccountCreation() {
+    List<Account> accounts = AccountTestModule.Builder()
+        .withAccountRandomizer()
+        .buildAndInsert(100);
+
+    // Each account has unique name
+    Set<String> names = new Set<String>();
+    for (Account acc : accounts) {
+        names.add(acc.Name);
+    }
+    System.assertEquals(100, names.size());
+}
+```
+
+### Create Reusable Randomizers
+
+```apex
+public class PhoneRandomizer implements TestModule.SingleFieldRandomizer {
+    public Object generate(Integer index) {
+        String areaCode = String.valueOf(100 + Math.mod(index, 900));
+        String prefix = String.valueOf(100 + Math.mod(index * 7, 900));
+        String suffix = String.valueOf(1000 + index);
+        return '(' + areaCode + ') ' + prefix + '-' + suffix;
+    }
+}
+```
+
+## Mock Relationships
+
+### Parent Relationships with Mocker
+
+```apex
+@IsTest
+static void testWithParentData() {
+    Contact con = (Contact) ContactTestModule.Mocker()
+        .setFakeId()
+        .set('Account.Name', 'Parent Account')
+        .set('Account.Industry', 'Technology')
+        .build();
+
+    System.assertEquals('Parent Account', con.Account.Name);
+}
+```
+
+### Child Relationships with Mocker
+
+```apex
+@IsTest
+static void testWithChildData() {
+    List<Contact> contacts = ContactTestModule.Mocker().build(5);
+    List<Opportunity> opps = OpportunityTestModule.Mocker().build(3);
+
+    Account acc = (Account) AccountTestModule.Mocker()
+        .setFakeId()
+        .setChildren('Contacts', contacts)
+        .setChildren('Opportunities', opps)
+        .build();
+
+    System.assertEquals(5, acc.Contacts.size());
+    System.assertEquals(3, acc.Opportunities.size());
+}
+```
+
+## Test Organization
+
+### One Module Per SObject
+
+```
+test-module/
+├── TestModule.cls              # Framework
+└── concrete-modules/
+    ├── AccountTestModule.cls   # Account builders
+    ├── ContactTestModule.cls   # Contact builders
+    └── OpportunityTestModule.cls
+```
+
+### Consistent Naming
+
+```apex
+// Module: {SObject}TestModule
+public class AccountTestModule { ... }
+
+// Builder: {SObject}Builder
+public class AccountBuilder extends TestModule.RecordBuilder { ... }
+
+// Mocker: {SObject}Mocker
+public class AccountMocker extends TestModule.RecordMocker { ... }
 ```
 
 ## Performance Tips
 
-1. **Cache Read-Heavy Data** - Data read often, changed rarely
-2. **Batch Cache Writes** - Cache multiple items together when possible
-3. **Use Appropriate Scope** - Transaction < Session < Org
-4. **Monitor Hit Rates** - Track cache effectiveness
+### Prefer Mocker for Unit Tests
+
+```apex
+// Slow - database operations
+@IsTest
+static void slowTest() {
+    Account acc = (Account) AccountTestModule.Builder()
+        .buildAndInsert();
+    // ...
+}
+
+// Fast - no database
+@IsTest
+static void fastTest() {
+    Account acc = (Account) AccountTestModule.Mocker()
+        .setFakeId()
+        .build();
+    // ...
+}
+```
+
+### Bulk Operations
+
+```apex
+// Good - single DML
+List<Account> accounts = AccountTestModule.Builder()
+    .buildAndInsert(100);
+
+// Avoid - multiple DML
+for (Integer i = 0; i < 100; i++) {
+    AccountTestModule.Builder().buildAndInsert();
+}
+```
+
+### Use @TestSetup for Shared Data
+
+```apex
+@IsTest
+private class AccountServiceTest {
+
+    @TestSetup
+    static void setup() {
+        AccountTestModule.Builder()
+            .enterprise()
+            .buildAndInsert(10);
+    }
+
+    @IsTest
+    static void test1() {
+        List<Account> accounts = [SELECT Id FROM Account];
+        // Use pre-created accounts
+    }
+
+    @IsTest
+    static void test2() {
+        List<Account> accounts = [SELECT Id FROM Account];
+        // Same accounts available
+    }
+}
+```
+
+## Error Handling
+
+### Handle Missing Templates
+
+```apex
+@IsTest
+static void testMissingTemplate() {
+    try {
+        AccountTestModule.Builder()
+            .useTemplate('nonexistent')
+            .build();
+        System.assert(false, 'Should have thrown exception');
+    } catch (TestModule.TestModuleException e) {
+        System.assert(e.getMessage().contains('not found'));
+    }
+}
+```
 
 ## Documentation
 
-Document your caching strategy:
+### Document Your Modules
 
 ```apex
 /**
- * Caches user preferences for the session.
- * Cache key: 'prefs' + userId
- * Invalidated when preferences are updated.
+ * Test data builder for Account records.
+ *
+ * Templates:
+ * - enterprise: Large company with 500+ employees
+ * - startup: Small company with <50 employees
+ * - partner: Partner account type
+ *
+ * @example
+ * Account acc = (Account) AccountTestModule.Builder()
+ *     .enterprise()
+ *     .withName('Custom Name')
+ *     .buildAndInsert();
  */
-public static Map<String, Object> getPreferences() {
-    // Implementation
+@IsTest
+public class AccountTestModule {
+    // ...
 }
 ```
 

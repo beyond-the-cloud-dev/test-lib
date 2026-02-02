@@ -2,7 +2,8 @@ import { defineConfig } from "vitepress";
 
 export default defineConfig({
   title: "Test Lib",
-  description: "Template",
+  description:
+    "Apex test data builder library with Builder and Mocker patterns for creating test records in Salesforce",
   base: "/",
   head: [
     ["link", { rel: "icon", href: "/favicon.ico" }],
@@ -38,11 +39,12 @@ export default defineConfig({
         ],
       },
       {
-        text: "Cache Types",
+        text: "Core Concepts",
         items: [
-          { text: "Transaction Cache", link: "/caches/transaction" },
-          { text: "Org Cache", link: "/caches/org" },
-          { text: "Session Cache", link: "/caches/session" },
+          { text: "Builder Pattern", link: "/builder" },
+          { text: "Mocker Pattern", link: "/mocker" },
+          { text: "Templates", link: "/templates" },
+          { text: "Randomizers", link: "/randomizers" },
         ],
       },
       {
@@ -58,7 +60,7 @@ export default defineConfig({
     socialLinks: [
       {
         icon: "github",
-        link: "https://github.com/beyond-the-cloud-dev/cache-manager",
+        link: "https://github.com/beyond-the-cloud-dev/test-lib",
       },
     ],
 
