@@ -261,7 +261,7 @@ public class AccountTestModule implements TestModule.MockerProvider {
         }
     }
 
-    public class IndustryRandomizer implements TestModule.SingleFieldRandomizer {
+    public class IndustryRandomizer implements TestModule.FieldRandomizer {
         private List<String> industries = new List<String>{
             'Technology', 'Finance', 'Healthcare', 'Retail'
         };

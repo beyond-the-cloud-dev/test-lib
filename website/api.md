@@ -68,7 +68,7 @@ public interface Builder {
     Builder set(String field, Object value);
     Builder useTemplate(String templateName);
     Builder withRandomizer(Randomizer randomizer);
-    Builder withRandomizer(SObjectField field, SingleFieldRandomizer randomizer);
+    Builder withRandomizer(SObjectField field, FieldRandomizer randomizer);
 
     SObject build();
     SObject buildAndInsert();
@@ -88,7 +88,7 @@ public interface Mocker {
     Mocker setChildren(String relationship, List<SObject> children);
     Mocker setFakeId();
     Mocker withRandomizer(Randomizer randomizer);
-    Mocker withRandomizer(SObjectField field, SingleFieldRandomizer randomizer);
+    Mocker withRandomizer(SObjectField field, FieldRandomizer randomizer);
 
     SObject build();
     List<SObject> build(Integer amount);
@@ -106,12 +106,12 @@ public interface Template {
 }
 ```
 
-### SingleFieldRandomizer
+### FieldRandomizer
 
 Interface for generating random values for a single field.
 
 ```apex
-public interface SingleFieldRandomizer {
+public interface FieldRandomizer {
     Object generate(Integer index);
 }
 ```
@@ -151,7 +151,7 @@ public abstract class RecordBuilder implements Builder {
 | `set(String, Object)` | Set field value using field name |
 | `useTemplate(String)` | Apply a named template |
 | `withRandomizer(Randomizer)` | Set record randomizer |
-| `withRandomizer(SObjectField, SingleFieldRandomizer)` | Set single field randomizer |
+| `withRandomizer(SObjectField, FieldRandomizer)` | Set single field randomizer |
 | `build()` | Build single record (no DML) |
 | `buildAndInsert()` | Build and insert single record |
 | `build(Integer)` | Build multiple records |
@@ -177,7 +177,7 @@ public abstract class RecordMocker implements Mocker {
 | `setChildren(String, List<SObject>)` | Set child relationship records |
 | `setFakeId()` | Generate and set a fake ID |
 | `withRandomizer(Randomizer)` | Set record randomizer |
-| `withRandomizer(SObjectField, SingleFieldRandomizer)` | Set single field randomizer |
+| `withRandomizer(SObjectField, FieldRandomizer)` | Set single field randomizer |
 | `build()` | Build single mock record |
 | `build(Integer)` | Build multiple mock records |
 
@@ -188,7 +188,7 @@ Virtual class for composing multiple field randomizers.
 ```apex
 public virtual class RecordRandomizer implements Randomizer {
     public RecordRandomizer setParent(Randomizer parent);
-    public RecordRandomizer add(SObjectField field, SingleFieldRandomizer randomizer);
+    public RecordRandomizer add(SObjectField field, FieldRandomizer randomizer);
     public Map<SObjectField, Object> generate(Integer index);
 }
 ```
@@ -198,7 +198,7 @@ public virtual class RecordRandomizer implements Randomizer {
 Built-in randomizer that cycles through a list of values.
 
 ```apex
-public class ListRandomizer implements SingleFieldRandomizer {
+public class ListRandomizer implements FieldRandomizer {
     public ListRandomizer(List<Object> values);
     public Object generate(Integer index);
 }

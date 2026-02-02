@@ -198,7 +198,7 @@ public AccountBuilder withRandomIndustry() {
     return this;
 }
 
-public class IndustryRandomizer implements TestModule.SingleFieldRandomizer {
+public class IndustryRandomizer implements TestModule.FieldRandomizer {
     private List<String> industries = new List<String>{
         'Technology', 'Finance', 'Healthcare', 'Retail'
     };
@@ -219,7 +219,7 @@ public AccountBuilder withAccountRandomizer() {
     return this;
 }
 
-public class AccountRandomizer extends TestModule.RecordRandomizer {
+public class AccountRandomizer implements TestModule.RecordRandomizer {
     public AccountRandomizer() {
         this.add(Account.Name, new NameRandomizer());
         this.add(Account.Industry, new IndustryRandomizer());
@@ -315,7 +315,7 @@ public class AccountTestModule implements TestModule.BuilderProvider {
         }
     }
 
-    public class IndustryRandomizer implements TestModule.SingleFieldRandomizer {
+    public class IndustryRandomizer implements TestModule.FieldRandomizer {
         private List<String> industries = new List<String>{
             'Technology', 'Finance', 'Healthcare', 'Retail'
         };
@@ -325,13 +325,13 @@ public class AccountTestModule implements TestModule.BuilderProvider {
         }
     }
 
-    public class NameRandomizer implements TestModule.SingleFieldRandomizer {
+    public class NameRandomizer implements TestModule.FieldRandomizer {
         public Object generate(Integer index) {
             return 'Company ' + (index + 1);
         }
     }
 
-    public class AccountRandomizer extends TestModule.RecordRandomizer {
+    public class AccountRandomizer implements TestModule.RecordRandomizer {
         public AccountRandomizer() {
             this.add(Account.Name, new NameRandomizer());
             this.add(Account.Industry, new IndustryRandomizer());

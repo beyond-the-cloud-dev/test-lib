@@ -195,7 +195,7 @@ static void testBulkAccountCreation() {
 ### Create Reusable Randomizers
 
 ```apex
-public class PhoneRandomizer implements TestModule.SingleFieldRandomizer {
+public class PhoneRandomizer implements TestModule.FieldRandomizer {
     public Object generate(Integer index) {
         String areaCode = String.valueOf(100 + Math.mod(index, 900));
         String prefix = String.valueOf(100 + Math.mod(index * 7, 900));

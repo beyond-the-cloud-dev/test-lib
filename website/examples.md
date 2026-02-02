@@ -97,7 +97,7 @@ static void testRecordRandomizer() {
 ### Custom Randomizer
 
 ```apex
-public class EmailRandomizer implements TestModule.SingleFieldRandomizer {
+public class EmailRandomizer implements TestModule.FieldRandomizer {
     public Object generate(Integer index) {
         return 'user' + (index + 1) + '@example.com';
     }

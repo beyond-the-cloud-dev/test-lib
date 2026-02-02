@@ -11,12 +11,12 @@ Randomizers help you:
 - Generate realistic test data
 - Cycle through predefined value sets
 
-## SingleFieldRandomizer Interface
+## FieldRandomizer Interface
 
 For generating values for a single field:
 
 ```apex
-public interface SingleFieldRandomizer {
+public interface FieldRandomizer {
     Object generate(Integer index);
 }
 ```
@@ -26,7 +26,7 @@ The `index` parameter indicates which record is being generated (0-based).
 ### Basic Implementation
 
 ```apex
-public class NameRandomizer implements TestModule.SingleFieldRandomizer {
+public class NameRandomizer implements TestModule.FieldRandomizer {
     public Object generate(Integer index) {
         return 'Company ' + (index + 1);
     }
@@ -38,7 +38,7 @@ public class NameRandomizer implements TestModule.SingleFieldRandomizer {
 ### Cycling Through Values
 
 ```apex
-public class IndustryRandomizer implements TestModule.SingleFieldRandomizer {
+public class IndustryRandomizer implements TestModule.FieldRandomizer {
     private List<String> industries = new List<String>{
         'Technology', 'Finance', 'Healthcare', 'Retail'
     };
@@ -84,10 +84,10 @@ public class AccountRandomizer implements TestModule.Randomizer {
 
 ## RecordRandomizer Class
 
-A helper class for composing multiple SingleFieldRandomizers:
+A helper class for composing multiple FieldRandomizers:
 
 ```apex
-public class AccountRandomizer extends TestModule.RecordRandomizer {
+public class AccountRandomizer implements TestModule.RecordRandomizer {
     public AccountRandomizer() {
         this.add(Account.Name, new NameRandomizer());
         this.add(Account.Industry, new IndustryRandomizer());
@@ -99,7 +99,7 @@ public class AccountRandomizer extends TestModule.RecordRandomizer {
 ### Chaining Randomizers
 
 ```apex
-public class FullAccountRandomizer extends TestModule.RecordRandomizer {
+public class FullAccountRandomizer implements TestModule.RecordRandomizer {
     public FullAccountRandomizer() {
         // Base randomizer
         this.setParent(new BasicAccountRandomizer());
@@ -178,7 +178,7 @@ List<Account> accounts = AccountTestModule.Mocker()
 ### Sequential Names
 
 ```apex
-public class CompanyNameRandomizer implements TestModule.SingleFieldRandomizer {
+public class CompanyNameRandomizer implements TestModule.FieldRandomizer {
     private String prefix;
 
     public CompanyNameRandomizer() {
@@ -202,7 +202,7 @@ public class CompanyNameRandomizer implements TestModule.SingleFieldRandomizer {
 ### Email Generator
 
 ```apex
-public class EmailRandomizer implements TestModule.SingleFieldRandomizer {
+public class EmailRandomizer implements TestModule.FieldRandomizer {
     private String domain;
 
     public EmailRandomizer() {
@@ -224,7 +224,7 @@ public class EmailRandomizer implements TestModule.SingleFieldRandomizer {
 ### Phone Number Generator
 
 ```apex
-public class PhoneRandomizer implements TestModule.SingleFieldRandomizer {
+public class PhoneRandomizer implements TestModule.FieldRandomizer {
     public Object generate(Integer index) {
         String areaCode = String.valueOf(100 + Math.mod(index, 900)).leftPad(3, '0');
         String prefix = String.valueOf(100 + Math.mod(index * 7, 900)).leftPad(3, '0');
@@ -239,7 +239,7 @@ public class PhoneRandomizer implements TestModule.SingleFieldRandomizer {
 ### Date Generator
 
 ```apex
-public class CloseDateRandomizer implements TestModule.SingleFieldRandomizer {
+public class CloseDateRandomizer implements TestModule.FieldRandomizer {
     private Date baseDate;
     private Integer dayIncrement;
 
@@ -259,7 +259,7 @@ public class CloseDateRandomizer implements TestModule.SingleFieldRandomizer {
 ### Amount Generator
 
 ```apex
-public class AmountRandomizer implements TestModule.SingleFieldRandomizer {
+public class AmountRandomizer implements TestModule.FieldRandomizer {
     private Decimal baseAmount;
     private Decimal multiplier;
 
@@ -279,7 +279,7 @@ public class AmountRandomizer implements TestModule.SingleFieldRandomizer {
 ### Picklist Cycler
 
 ```apex
-public class StageRandomizer implements TestModule.SingleFieldRandomizer {
+public class StageRandomizer implements TestModule.FieldRandomizer {
     private List<String> stages = new List<String>{
         'Prospecting',
         'Qualification',
@@ -298,7 +298,7 @@ public class StageRandomizer implements TestModule.SingleFieldRandomizer {
 ## Composite Randomizer Example
 
 ```apex
-public class FullContactRandomizer extends TestModule.RecordRandomizer {
+public class FullContactRandomizer implements TestModule.RecordRandomizer {
     public FullContactRandomizer() {
         this.add(Contact.FirstName, new FirstNameRandomizer());
         this.add(Contact.LastName, new LastNameRandomizer());
@@ -308,7 +308,7 @@ public class FullContactRandomizer extends TestModule.RecordRandomizer {
     }
 }
 
-public class FirstNameRandomizer implements TestModule.SingleFieldRandomizer {
+public class FirstNameRandomizer implements TestModule.FieldRandomizer {
     private List<String> names = new List<String>{
         'John', 'Jane', 'Bob', 'Alice', 'Charlie', 'Diana'
     };
@@ -318,7 +318,7 @@ public class FirstNameRandomizer implements TestModule.SingleFieldRandomizer {
     }
 }
 
-public class LastNameRandomizer implements TestModule.SingleFieldRandomizer {
+public class LastNameRandomizer implements TestModule.FieldRandomizer {
     private List<String> names = new List<String>{
         'Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia'
     };
@@ -328,7 +328,7 @@ public class LastNameRandomizer implements TestModule.SingleFieldRandomizer {
     }
 }
 
-public class TitleRandomizer implements TestModule.SingleFieldRandomizer {
+public class TitleRandomizer implements TestModule.FieldRandomizer {
     private List<String> titles = new List<String>{
         'CEO', 'CTO', 'CFO', 'VP Sales', 'Director', 'Manager'
     };

@@ -1,15 +1,6 @@
 @IsTest
 @TestVisible
 private class TestModule {
-    public class TestModuleException extends Exception {}
-
-    private static Integer fakeIdCounter = 1;
-
-    public static Id fakeId(SObjectType sot) {
-        String keyPrefix = sot.getDescribe().getKeyPrefix();
-        return Id.valueOf(keyPrefix + '0'.repeat(12 - String.valueOf(fakeIdCounter).length()) + fakeIdCounter++);
-    }
-
     public interface BuilderProvider {
         Builder Builder();
     }
@@ -22,8 +13,8 @@ private class TestModule {
         Builder set(SObjectField field, Object value);
         Builder set(String field, Object value);
         Builder useTemplate(String templateName);
-        Builder withRandomizer(Randomizer randomizer);
-        Builder withRandomizer(SObjectField field, SingleFieldRandomizer randomizer);
+        Builder withRandomizer(TestModule.RecordRandomizer randomizer);
+        Builder withRandomizer(SObjectField field, TestModule.FieldRandomizer randomizer);
 
         SObject build();
         SObject buildAndInsert();
@@ -33,11 +24,11 @@ private class TestModule {
 
     public interface Mocker {
         Mocker set(SObjectField field, Object value);
-        Mocker set(String field, Object value);
+        Mocker set(String field, Object value); // parent relationships, formulas, rollup sums, etc.
         Mocker setChildren(String relationship, List<SObject> children);
         Mocker setFakeId();
-        Mocker withRandomizer(Randomizer randomizer);
-        Mocker withRandomizer(SObjectField field, SingleFieldRandomizer randomizer);
+        Mocker withRandomizer(TestModule.RecordRandomizer randomizer);
+        Mocker withRandomizer(SObjectField field, TestModule.FieldRandomizer randomizer);
 
         SObject build();
         List<SObject> build(Integer amount);
@@ -48,55 +39,30 @@ private class TestModule {
         Map<String, SObject> templates();
     }
 
-    public interface SingleFieldRandomizer {
+    public interface FieldRandomizer {
         Object generate(Integer index);
     }
 
-    public interface Randomizer {
-        Map<SObjectField, Object> generate(Integer index);
+    public interface RecordRandomizer {
+        Map<SObjectField, TestModule.FieldRandomizer> randomizers();
     }
 
-    public virtual class RecordRandomizer implements Randomizer {
-        private Randomizer parent;
-        private Map<SObjectField, SingleFieldRandomizer> fieldRandomizers = new Map<SObjectField, SingleFieldRandomizer>();
+    // Default utilities
 
-        public RecordRandomizer setParent(Randomizer parent) {
-            this.parent = parent;
-            return this;
-        }
+    public static final RandomIdGenerator IdGenerator = new RandomIdGenerator();
 
-        public RecordRandomizer add(SObjectField field, SingleFieldRandomizer randomizer) {
-            this.fieldRandomizers.put(field, randomizer);
-            return this;
-        }
-
-        public Map<SObjectField, Object> generate(Integer index) {
-            Map<SObjectField, Object> values = this.parent != null
-                ? this.parent.generate(index)
-                : new Map<SObjectField, Object>();
-            for (SObjectField field : this.fieldRandomizers.keySet()) {
-                values.put(field, this.fieldRandomizers.get(field).generate(index));
-            }
-            return values;
-        }
+    public static Id fakeId(SObjectType objectType) {
+        return IdGenerator.get(objectType);
     }
 
-    public class ListRandomizer implements SingleFieldRandomizer {
-        private List<Object> values;
-
-        public ListRandomizer(List<Object> values) {
-            this.values = values;
-        }
-
-        public Object generate(Integer index) {
-            return values[Math.mod(index, values.size())];
-        }
+    public static FieldRandomizer ListRandomizer(List<Object> values) {
+        return new ListRandomizer(values);
     }
 
     public abstract class RecordBuilder implements Builder {
         private SObject prototype;
         private Template templates;
-        private RecordRandomizer randomizer = new RecordRandomizer();
+        private RandomizersContainer randomizers = new RandomizersContainer();
 
         public RecordBuilder(SObject prototype) {
             this.prototype = prototype;
@@ -135,22 +101,18 @@ private class TestModule {
             return this;
         }
 
-        public virtual RecordBuilder withRandomizer(Randomizer randomizer) {
-            this.randomizer.setParent(randomizer);
-            Map<SObjectField, Object> values = randomizer.generate(0);
-            for (SObjectField field : values.keySet()) {
-                this.prototype.put(field, values.get(field));
-            }
+        public virtual RecordBuilder withRandomizer(RecordRandomizer randomizer) {
+            this.randomizers.add(randomizer);
             return this;
         }
 
-        public virtual RecordBuilder withRandomizer(SObjectField field, SingleFieldRandomizer randomizer) {
-            this.randomizer.add(field, randomizer);
-            this.prototype.put(field, randomizer.generate(0));
+        public virtual RecordBuilder withRandomizer(SObjectField field, FieldRandomizer randomizer) {
+            this.randomizers.add(field, randomizer);
             return this;
         }
 
         public SObject build() {
+            this.randomizers.randomizeFieldsValues(this.prototype, 0);
             return this.prototype;
         }
 
@@ -161,29 +123,21 @@ private class TestModule {
 
         public List<SObject> build(Integer amount) {
             List<SObject> records = new List<SObject>();
+            this.randomizeFieldsValues(records, amount);
+            return records;
+        }
 
+        private void randomizeFieldsValues(List<SObject> records, Integer amount) {
             for (Integer i = 0; i < amount; i++) {
                 SObject cloned = this.prototype.clone(false, true, false, false);
-
-                Map<SObjectField, Object> randomizerValues = this.randomizer.generate(i);
-                for (SObjectField field : randomizerValues.keySet()) {
-                    Object value = randomizerValues.get(field);
-                    if (value != null) {
-                        cloned.put(field, value);
-                    }
-                }
-
+                this.randomizers.randomizeFieldsValues(cloned, i);
                 records.add(cloned);
             }
-
-            return records;
         }
 
         public List<SObject> buildAndInsert(Integer amount) {
             List<SObject> records = this.build(amount);
-
             insert as system records;
-
             return records;
         }
     }
@@ -192,7 +146,7 @@ private class TestModule {
         private Map<String, Object> fields = new Map<String, Object>();
         private Map<String, List<SObject>> children = new Map<String, List<SObject>>();
         private Template templates;
-        private RecordRandomizer randomizer = new RecordRandomizer();
+        private RandomizersContainer randomizers = new RandomizersContainer();
 
         private SObjectType prototypeType;
 
@@ -221,17 +175,17 @@ private class TestModule {
         }
 
         public virtual RecordMocker setFakeId() {
-            this.fields.put('Id', TestModule.fakeId(this.prototypeType));
+            this.fields.put('Id', TestModule.IdGenerator.get(this.prototypeType));
             return this;
         }
 
-        public virtual RecordMocker withRandomizer(Randomizer randomizer) {
-            this.randomizer.setParent(randomizer);
+        public virtual RecordMocker withRandomizer(SObjectField field, FieldRandomizer randomizer) {
+            this.randomizers.add(field, randomizer);
             return this;
         }
 
-        public virtual RecordMocker withRandomizer(SObjectField field, SingleFieldRandomizer randomizer) {
-            this.randomizer.add(field, randomizer);
+        public virtual RecordMocker withRandomizer(RecordRandomizer randomizer) {
+            this.randomizers.add(randomizer);
             return this;
         }
 
@@ -251,8 +205,9 @@ private class TestModule {
             Map<String, Object> record = new Map<String, Object>();
 
             this.setNested(record);
-            this.randomizeFieldsValues(record);
             this.setChildren(record);
+
+            this.randomizers.randomizeFieldsValues(record, index);
 
             return (SObject) JSON.deserialize(JSON.serialize(record), Type.forName(this.prototypeType.toString()));
         }
@@ -260,20 +215,6 @@ private class TestModule {
         private void setNested(Map<String, Object> record) {
             for (String fieldPath : this.fields.keySet()) {
                 this.setNestedValue(record, fieldPath, this.fields.get(fieldPath));
-            }
-        }
-
-        public void randomizeFieldsValues(Map<String, Object> record) {
-            Map<SObjectField, Object> randomizerValues = this.randomizer.generate(0);
-
-            for (SObjectField field : randomizerValues.keySet()) {
-                Object value = randomizerValues.get(field);
-
-                if (value == null) {
-                    continue;
-                }
-
-                record.put(field.toString(), value);
             }
         }
 
@@ -298,8 +239,97 @@ private class TestModule {
             for (String relationship : this.children.keySet()) {
                 List<SObject> childRecords = this.children.get(relationship);
 
-                record.put(relationship, new Map<String, Object>{ 'totalSize' => childRecords.size(), 'done' => true, 'records' => JSON.deserializeUntyped(JSON.serialize(childRecords)) });
+                record.put(
+                    relationship,
+                    new Map<String, Object>{ 'totalSize' => childRecords.size(), 'done' => true, 'records' => JSON.deserializeUntyped(JSON.serialize(childRecords)) }
+                );
             }
         }
+    }
+
+    // Default randomizers
+
+    public class ListRandomizer implements FieldRandomizer {
+        private List<Object> values;
+
+        public ListRandomizer(List<Object> values) {
+            this.values = values;
+        }
+
+        public Object generate(Integer index) {
+            return values[Math.mod(index, values.size())];
+        }
+    }
+
+    private class RandomizersContainer {
+        private Map<SObjectField, FieldRandomizer> fieldRandomizers = new Map<SObjectField, FieldRandomizer>();
+
+        public RandomizersContainer add(SObjectField field, FieldRandomizer randomizer) {
+            this.fieldRandomizers.put(field, randomizer);
+            return this;
+        }
+
+        public RandomizersContainer add(RecordRandomizer randomizer) {
+            for (SObjectField field : randomizer.randomizers().keySet()) {
+                this.add(field, randomizer.randomizers().get(field));
+            }
+
+            return this;
+        }
+
+        public void randomizeFieldsValues(SObject record, Integer index) {
+            for (SObjectField field : this.fieldRandomizers.keySet()) {
+                Object value = this.fieldRandomizers.get(field).generate(index);
+
+                if (value == null) {
+                    continue;
+                }
+
+                record.put(field, value);
+            }
+        }
+
+        public void randomizeFieldsValues(Map<String, Object> record, Integer index) {
+            for (SObjectField field : this.fieldRandomizers.keySet()) {
+                Object value = this.fieldRandomizers.get(field).generate(index);
+
+                if (value == null) {
+                    continue;
+                }
+
+                record.put(field.toString(), value);
+            }
+        }
+    }
+
+    // Utilities
+
+    @TestVisible
+    private class RandomIdGenerator {
+        private Integer counter = 0;
+        private Map<SObjectType, String> prefixBySObject = new Map<SObjectType, String>();
+
+        public Id get(SObjectType objectType) {
+            return this.get(this.getPrefix(objectType));
+        }
+
+        private Id get(String prefix) {
+            this.counter++;
+            return Id.valueOf(prefix + '0'.repeat(15 - prefix.length() - String.valueOf(this.counter).length()) + String.valueOf(this.counter));
+        }
+
+        private String getPrefix(SObjectType objectType) {
+            String prefix = this.prefixBySObject.get(objectType);
+
+            if (prefix == null) {
+                prefix = objectType.getDescribe().getKeyPrefix();
+                this.prefixBySObject.put(objectType, prefix);
+            }
+
+            return prefix;
+        }
+    }
+
+    public class TestModuleException extends Exception {
     }
 }
