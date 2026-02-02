@@ -32,6 +32,16 @@ public class AccountTestModule implements TestModule.BuilderProvider, TestModule
             super.useTemplate('startup');
             return this;
         }
+
+        public AccountBuilder withRandomIndustry() {
+            super.withRandomizer(Account.Industry, new IndustryRandomizer());
+            return this;
+        }
+
+        public AccountBuilder withAccountRandomizer() {
+            super.withRandomizer(new AccountRandomizer());
+            return this;
+        }
     }
 
     public class AccountMocker extends TestModule.RecordMocker {
@@ -48,6 +58,16 @@ public class AccountTestModule implements TestModule.BuilderProvider, TestModule
             super.set('Parent.Name', parentName);
             return this;
         }
+
+        public AccountMocker withRandomIndustry() {
+            super.withRandomizer(Account.Industry, new IndustryRandomizer());
+            return this;
+        }
+
+        public AccountMocker withAccountRandomizer() {
+            super.withRandomizer(new AccountRandomizer());
+            return this;
+        }
     }
 
     public class Templates implements TestModule.Template {
@@ -60,6 +80,27 @@ public class AccountTestModule implements TestModule.BuilderProvider, TestModule
                 'enterprise' => new Account(Name = 'Enterprise Account', Industry = 'Technology', AnnualRevenue = 1000000),
                 'startup' => new Account(Name = 'Startup Account', Industry = 'Technology', AnnualRevenue = 100000)
             };
+        }
+    }
+
+    public class IndustryRandomizer implements TestModule.SingleFieldRandomizer {
+        private List<String> industries = new List<String>{ 'Technology', 'Finance', 'Healthcare', 'Retail' };
+
+        public Object generate(Integer index) {
+            return industries[Math.mod(index, industries.size())];
+        }
+    }
+
+    public class CompanyNameRandomizer implements TestModule.SingleFieldRandomizer {
+        public Object generate(Integer index) {
+            return 'Company ' + (index + 1);
+        }
+    }
+
+    public class AccountRandomizer extends TestModule.RecordRandomizer {
+        public AccountRandomizer() {
+            this.add(Account.Name, new CompanyNameRandomizer());
+            this.add(Account.Industry, new IndustryRandomizer());
         }
     }
 }

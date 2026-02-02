@@ -97,7 +97,7 @@ private class TestModule_Test {
     @IsTest
     static void builderWithRandomizer() {
         List<SObject> accounts = new AccountTestModule().Builder()
-            .useRandomizer(new AccountRandomizer())
+            .withRandomizer(new AccountRandomizer())
             .build(3);
 
         Assert.areEqual(3, accounts.size());
@@ -109,10 +109,47 @@ private class TestModule_Test {
     }
 
     @IsTest
+    static void builderWithSingleFieldRandomizer() {
+        List<SObject> accounts = new AccountTestModule().Builder()
+            .withRandomizer(Account.Name, new NameRandomizer())
+            .build(3);
+
+        Assert.areEqual(3, accounts.size());
+        Assert.areEqual('Name 0', accounts[0].get(Account.Name));
+        Assert.areEqual('Name 1', accounts[1].get(Account.Name));
+        Assert.areEqual('Name 2', accounts[2].get(Account.Name));
+    }
+
+    @IsTest
+    static void builderWithListRandomizer() {
+        List<SObject> accounts = new AccountTestModule().Builder()
+            .withRandomizer(Account.Industry, new TestModule.ListRandomizer(new List<Object>{'Tech', 'Finance', 'Health'}))
+            .build(5);
+
+        Assert.areEqual(5, accounts.size());
+        Assert.areEqual('Tech', accounts[0].get(Account.Industry));
+        Assert.areEqual('Finance', accounts[1].get(Account.Industry));
+        Assert.areEqual('Health', accounts[2].get(Account.Industry));
+        Assert.areEqual('Tech', accounts[3].get(Account.Industry));
+        Assert.areEqual('Finance', accounts[4].get(Account.Industry));
+    }
+
+    @IsTest
+    static void builderCombinedRandomizers() {
+        List<SObject> accounts = new AccountTestModule().Builder()
+            .withRandomizer(new AccountRandomizer())
+            .withRandomizer(Account.Industry, new TestModule.ListRandomizer(new List<Object>{'Override'}))
+            .build(2);
+
+        Assert.areEqual('Company 0', accounts[0].get(Account.Name));
+        Assert.areEqual('Override', accounts[0].get(Account.Industry));
+    }
+
+    @IsTest
     static void builderRandomizerPreservesUnsetFields() {
         List<SObject> accounts = new AccountTestModule().Builder()
             .withIndustry('Finance')
-            .useRandomizer(new AccountRandomizer())
+            .withRandomizer(new AccountRandomizer())
             .build(2);
 
         Assert.areEqual('Finance', accounts[0].get(Account.Industry));
@@ -331,6 +368,42 @@ private class TestModule_Test {
     }
 
     @IsTest
+    static void mockerWithBulkRandomizer() {
+        List<SObject> accounts = new AccountTestModule().Mocker()
+            .withRandomizer(new AccountRandomizer())
+            .build(3);
+
+        Assert.areEqual(3, accounts.size());
+        Assert.areEqual('Company 0', accounts[0].get('Name'));
+        Assert.areEqual('Company 1', accounts[1].get('Name'));
+        Assert.areEqual('Company 2', accounts[2].get('Name'));
+    }
+
+    @IsTest
+    static void mockerWithSingleFieldRandomizer() {
+        List<SObject> accounts = new AccountTestModule().Mocker()
+            .withRandomizer(Account.Name, new NameRandomizer())
+            .build(3);
+
+        Assert.areEqual(3, accounts.size());
+        Assert.areEqual('Name 0', accounts[0].get('Name'));
+        Assert.areEqual('Name 1', accounts[1].get('Name'));
+        Assert.areEqual('Name 2', accounts[2].get('Name'));
+    }
+
+    @IsTest
+    static void mockerWithListRandomizer() {
+        List<SObject> accounts = new AccountTestModule().Mocker()
+            .withRandomizer(Account.Industry, new TestModule.ListRandomizer(new List<Object>{'A', 'B'}))
+            .build(4);
+
+        Assert.areEqual('A', accounts[0].get('Industry'));
+        Assert.areEqual('B', accounts[1].get('Industry'));
+        Assert.areEqual('A', accounts[2].get('Industry'));
+        Assert.areEqual('B', accounts[3].get('Industry'));
+    }
+
+    @IsTest
     static void fakeIdStaticUtility() {
         Id accountId = TestModule.fakeId(Account.SObjectType);
         Id contactId = TestModule.fakeId(Contact.SObjectType);
@@ -464,12 +537,28 @@ private class TestModule_Test {
         }
     }
 
-    public class AccountRandomizer implements TestModule.Randomizer {
-        public Map<SObjectField, Object> generate(Integer index) {
-            return new Map<SObjectField, Object>{
-                Account.Name => 'Company ' + index,
-                Account.AnnualRevenue => (index + 1) * 100000
-            };
+    public class AccountRandomizer extends TestModule.RecordRandomizer {
+        public AccountRandomizer() {
+            this.add(Account.Name, new CompanyNameRandomizer());
+            this.add(Account.AnnualRevenue, new RevenueRandomizer());
+        }
+    }
+
+    public class CompanyNameRandomizer implements TestModule.SingleFieldRandomizer {
+        public Object generate(Integer index) {
+            return 'Company ' + index;
+        }
+    }
+
+    public class RevenueRandomizer implements TestModule.SingleFieldRandomizer {
+        public Object generate(Integer index) {
+            return (index + 1) * 100000;
+        }
+    }
+
+    public class NameRandomizer implements TestModule.SingleFieldRandomizer {
+        public Object generate(Integer index) {
+            return 'Name ' + index;
         }
     }
 }
