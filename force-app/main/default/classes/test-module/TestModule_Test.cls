@@ -324,7 +324,7 @@ private class TestModule_Test {
     @IsTest
     static void mockerSetReadOnlyNestedField() {
         Account acc = (Account) new AccountTestModule().Mocker()
-            .setReadOnly('Owner.Name', 'System Admin')
+            .set('Owner.Name', 'System Admin')
             .build();
 
         Assert.areEqual('System Admin', acc.Owner.Name);
@@ -413,7 +413,7 @@ private class TestModule_Test {
         }
 
         public AccountMocker withCreatedDate(Datetime createdDate) {
-            super.setReadOnly('CreatedDate', createdDate);
+            super.set('CreatedDate', createdDate);
             return this;
         }
 

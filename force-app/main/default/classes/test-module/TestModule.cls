@@ -35,7 +35,6 @@ private class TestModule {
         Mocker set(String field, Object value);
         Mocker setChildren(String relationship, List<SObject> children);
         Mocker setFakeId();
-        Mocker setReadOnly(String fieldPath, Object value);
 
         SObject build();
         List<SObject> build(Integer amount);
@@ -135,7 +134,6 @@ private class TestModule {
 
     public abstract class RecordMocker implements Mocker {
         private Map<String, Object> fields = new Map<String, Object>();
-        private Map<String, Object> readOnlyFields = new Map<String, Object>();
         private Map<String, List<SObject>> children = new Map<String, List<SObject>>();
         private Template templates;
 
@@ -166,12 +164,7 @@ private class TestModule {
         }
 
         public virtual RecordMocker setFakeId() {
-            this.readOnlyFields.put('Id', TestModule.fakeId(this.prototypeType));
-            return this;
-        }
-
-        public virtual RecordMocker setReadOnly(String fieldPath, Object value) {
-            this.readOnlyFields.put(fieldPath, value);
+            this.fields.put('Id', TestModule.fakeId(this.prototypeType));
             return this;
         }
 
@@ -179,7 +172,6 @@ private class TestModule {
             Map<String, Object> record = new Map<String, Object>();
 
             this.setNested(record);
-            this.setReadOnlyFields(record);
             this.setChildren(record);
 
             return (SObject) JSON.deserialize(JSON.serialize(record), Type.forName(this.prototypeType.toString()));
@@ -196,12 +188,6 @@ private class TestModule {
         private void setNested(Map<String, Object> record) {
             for (String fieldPath : this.fields.keySet()) {
                 this.setNestedValue(record, fieldPath, this.fields.get(fieldPath));
-            }
-        }
-
-        private void setReadOnlyFields(Map<String, Object> record) {
-            for (String fieldPath : this.readOnlyFields.keySet()) {
-                this.setNestedValue(record, fieldPath, this.readOnlyFields.get(fieldPath));
             }
         }
 
