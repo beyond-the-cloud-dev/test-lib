@@ -54,7 +54,7 @@ Account acc = (Account) AccountTestModule.Builder()
     .build();
 
 // acc.Id is null - not inserted
-System.assertEquals(null, acc.Id);
+Assert.isNull(acc.Id);
 ```
 
 ### Single Record (With Insert)
@@ -65,31 +65,31 @@ Account acc = (Account) AccountTestModule.Builder()
     .buildAndInsert();
 
 // acc.Id is set - record is in database
-System.assertNotEquals(null, acc.Id);
+Assert.isNotNull(acc.Id);
 ```
 
 ### Multiple Records (No DML)
 
 ```apex
-List<Account> accounts = AccountTestModule.Builder()
+List<SObject> accounts = AccountTestModule.Builder()
     .withIndustry('Technology')
     .build(10);
 
 // 10 records, none inserted
-System.assertEquals(10, accounts.size());
-System.assertEquals(null, accounts[0].Id);
+Assert.areEqual(10, accounts.size());
+Assert.isNull(accounts[0].Id);
 ```
 
 ### Multiple Records (With Insert)
 
 ```apex
-List<Account> accounts = AccountTestModule.Builder()
+List<SObject> accounts = AccountTestModule.Builder()
     .withIndustry('Technology')
     .buildAndInsert(10);
 
 // 10 records, all inserted
-System.assertEquals(10, accounts.size());
-System.assertNotEquals(null, accounts[0].Id);
+Assert.areEqual(10, accounts.size());
+Assert.isNotNull(accounts[0].Id);
 ```
 
 ## Setting Field Values
@@ -141,14 +141,12 @@ public class Templates implements TestModule.Template {
             'enterprise' => new Account(
                 Name = 'Enterprise Account',
                 Industry = 'Technology',
-                AnnualRevenue = 1000000,
-                NumberOfEmployees = 500
+                AnnualRevenue = 1000000
             ),
             'startup' => new Account(
                 Name = 'Startup Account',
                 Industry = 'Technology',
-                AnnualRevenue = 100000,
-                NumberOfEmployees = 10
+                AnnualRevenue = 100000
             )
         };
     }
@@ -182,15 +180,15 @@ Account acc = (Account) AccountTestModule.Builder()
     .buildAndInsert();
 
 // Has template values plus custom name
-System.assertEquals('Custom Enterprise', acc.Name);
-System.assertEquals(1000000, acc.AnnualRevenue);
+Assert.areEqual('Custom Enterprise', acc.Name);
+Assert.areEqual(1000000, acc.AnnualRevenue);
 ```
 
 ## Using Randomizers
 
-Randomizers generate unique values for each record:
+Randomizers generate unique values for each record when building multiple records.
 
-### Single Field Randomizer
+### FieldRandomizer - Single Field
 
 ```apex
 public AccountBuilder withRandomIndustry() {
@@ -209,9 +207,7 @@ public class IndustryRandomizer implements TestModule.FieldRandomizer {
 }
 ```
 
-### Record Randomizer
-
-For multiple fields:
+### RecordRandomizer - Multiple Fields
 
 ```apex
 public AccountBuilder withAccountRandomizer() {
@@ -220,23 +216,34 @@ public AccountBuilder withAccountRandomizer() {
 }
 
 public class AccountRandomizer implements TestModule.RecordRandomizer {
-    public AccountRandomizer() {
-        this.add(Account.Name, new NameRandomizer());
-        this.add(Account.Industry, new IndustryRandomizer());
+    public Map<SObjectField, TestModule.FieldRandomizer> randomizers() {
+        return new Map<SObjectField, TestModule.FieldRandomizer>{
+            Account.Name => new CompanyNameRandomizer(),
+            Account.Industry => new IndustryRandomizer()
+        };
+    }
+}
+
+public class CompanyNameRandomizer implements TestModule.FieldRandomizer {
+    public Object generate(Integer index) {
+        return 'Company ' + (index + 1);
     }
 }
 ```
 
-### Using Randomizers
+### Using Built-in ListRandomizer
 
 ```apex
-List<Account> accounts = AccountTestModule.Builder()
-    .withAccountRandomizer()
-    .buildAndInsert(100);
+List<SObject> accounts = AccountTestModule.Builder()
+    .withRandomizer(Account.Industry,
+        TestModule.ListRandomizer(new List<Object>{ 'Tech', 'Finance', 'Health' }))
+    .build(5);
 
-// Each account has unique name and cycling industry
-System.assertEquals('Company 1', accounts[0].Name);
-System.assertEquals('Company 2', accounts[1].Name);
+// Industries cycle: Tech, Finance, Health, Tech, Finance
+Assert.areEqual('Tech', accounts[0].get('Industry'));
+Assert.areEqual('Finance', accounts[1].get('Industry'));
+Assert.areEqual('Health', accounts[2].get('Industry'));
+Assert.areEqual('Tech', accounts[3].get('Industry'));
 ```
 
 ## Complete Builder Example
@@ -263,11 +270,6 @@ public class AccountTestModule implements TestModule.BuilderProvider {
 
         public AccountBuilder withIndustry(String industry) {
             super.set(Account.Industry, industry);
-            return this;
-        }
-
-        public AccountBuilder withRevenue(Decimal revenue) {
-            super.set(Account.AnnualRevenue, revenue);
             return this;
         }
 
@@ -315,6 +317,15 @@ public class AccountTestModule implements TestModule.BuilderProvider {
         }
     }
 
+    public class AccountRandomizer implements TestModule.RecordRandomizer {
+        public Map<SObjectField, TestModule.FieldRandomizer> randomizers() {
+            return new Map<SObjectField, TestModule.FieldRandomizer>{
+                Account.Name => new CompanyNameRandomizer(),
+                Account.Industry => new IndustryRandomizer()
+            };
+        }
+    }
+
     public class IndustryRandomizer implements TestModule.FieldRandomizer {
         private List<String> industries = new List<String>{
             'Technology', 'Finance', 'Healthcare', 'Retail'
@@ -325,16 +336,9 @@ public class AccountTestModule implements TestModule.BuilderProvider {
         }
     }
 
-    public class NameRandomizer implements TestModule.FieldRandomizer {
+    public class CompanyNameRandomizer implements TestModule.FieldRandomizer {
         public Object generate(Integer index) {
             return 'Company ' + (index + 1);
-        }
-    }
-
-    public class AccountRandomizer implements TestModule.RecordRandomizer {
-        public AccountRandomizer() {
-            this.add(Account.Name, new NameRandomizer());
-            this.add(Account.Industry, new IndustryRandomizer());
         }
     }
 }
@@ -353,24 +357,21 @@ private class AccountServiceTest {
             .withName('Acme Enterprise')
             .buildAndInsert();
 
-        System.assertEquals('Acme Enterprise', acc.Name);
-        System.assertEquals(1000000, acc.AnnualRevenue);
+        Assert.areEqual('Acme Enterprise', acc.Name);
+        Assert.areEqual(1000000, acc.AnnualRevenue);
     }
 
     @IsTest
     static void shouldCreateBulkAccounts() {
-        List<Account> accounts = AccountTestModule.Builder()
+        List<SObject> accounts = AccountTestModule.Builder()
             .withAccountRandomizer()
             .buildAndInsert(50);
 
-        System.assertEquals(50, accounts.size());
+        Assert.areEqual(50, accounts.size());
 
         // Verify unique names
-        Set<String> names = new Set<String>();
-        for (Account acc : accounts) {
-            names.add(acc.Name);
-        }
-        System.assertEquals(50, names.size());
+        Assert.areEqual('Company 1', accounts[0].get('Name'));
+        Assert.areEqual('Company 2', accounts[1].get('Name'));
     }
 }
 ```

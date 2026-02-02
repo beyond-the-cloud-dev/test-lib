@@ -50,12 +50,12 @@ static void testWithRealRecords() {
         .buildAndInsert();
 
     // Create multiple records
-    List<Account> accounts = AccountTestModule.Builder()
+    List<SObject> accounts = AccountTestModule.Builder()
         .withAccountRandomizer()
         .buildAndInsert(10);
 
     // Records have real IDs and are in the database
-    System.assertNotEquals(null, acc.Id);
+    Assert.isNotNull(acc.Id);
 }
 ```
 
@@ -77,7 +77,7 @@ static void testWithMockedRecords() {
         .build();
 
     // Mock child relationships
-    List<Contact> contacts = ContactTestModule.Mocker().build(3);
+    List<Contact> contacts = (List<Contact>) ContactTestModule.Mocker().build(3);
     Account accWithContacts = (Account) AccountTestModule.Mocker()
         .withContacts(contacts)
         .build();
@@ -125,25 +125,28 @@ public class AccountMocker extends TestModule.RecordMocker {
 
 | Method | Description |
 |--------|-------------|
-| `set(field, value)` | Set field value using SObjectField token |
-| `set(fieldName, value)` | Set field value using String field name |
-| `useTemplate(name)` | Apply named template |
-| `withRandomizer(randomizer)` | Apply record randomizer |
+| `set(SObjectField, Object)` | Set field value using SObjectField token |
+| `set(String, Object)` | Set field value using String field name |
+| `useTemplate(String)` | Apply named template |
+| `withRandomizer(RecordRandomizer)` | Apply record randomizer for multiple fields |
+| `withRandomizer(SObjectField, FieldRandomizer)` | Apply single field randomizer |
 | `build()` | Build single record (no DML) |
 | `buildAndInsert()` | Build and insert single record |
-| `build(amount)` | Build multiple records (no DML) |
-| `buildAndInsert(amount)` | Build and insert multiple records |
+| `build(Integer)` | Build multiple records (no DML) |
+| `buildAndInsert(Integer)` | Build and insert multiple records |
 
 ## Mocker Methods
 
 | Method | Description |
 |--------|-------------|
-| `set(field, value)` | Set field value |
-| `setChildren(relationship, records)` | Set child relationship |
+| `set(SObjectField, Object)` | Set field value |
+| `set(String, Object)` | Set field value (supports dot notation for parent relationships) |
+| `setChildren(String, List<SObject>)` | Set child relationship |
 | `setFakeId()` | Generate fake ID |
-| `withRandomizer(randomizer)` | Apply randomizer |
+| `withRandomizer(RecordRandomizer)` | Apply record randomizer |
+| `withRandomizer(SObjectField, FieldRandomizer)` | Apply single field randomizer |
 | `build()` | Build single mock record |
-| `build(amount)` | Build multiple mock records |
+| `build(Integer)` | Build multiple mock records |
 
 ## Quick Example
 
@@ -160,29 +163,29 @@ private class OpportunityServiceTest {
 
         // Act
         Opportunity opp = (Opportunity) OpportunityTestModule.Builder()
-            .withAccount(acc.Id)
+            .set(Opportunity.AccountId, acc.Id)
             .withAmount(100000)
             .buildAndInsert();
 
         // Assert
-        System.assertEquals(acc.Id, opp.AccountId);
-        System.assertEquals(100000, opp.Amount);
+        Assert.areEqual(acc.Id, opp.AccountId);
+        Assert.areEqual(100000, opp.Amount);
     }
 
     @IsTest
-    static void shouldCalculateExpectedRevenue() {
+    static void shouldProcessClosedOpportunity() {
         // Arrange - Use Mocker for pure unit tests
         Opportunity opp = (Opportunity) OpportunityTestModule.Mocker()
-            .setFakeId()
-            .set(Opportunity.Amount, 100000)
-            .set(Opportunity.Probability, 75)
+            .withFakeId()
+            .withStageName('Closed Won')
+            .withAmount(100000)
             .build();
 
         // Act - Test pure logic without database
-        Decimal expected = OpportunityService.calculateExpected(opp);
+        Boolean isClosed = OpportunityService.isClosed(opp);
 
         // Assert
-        System.assertEquals(75000, expected);
+        Assert.isTrue(isClosed);
     }
 }
 ```

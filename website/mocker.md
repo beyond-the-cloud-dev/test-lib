@@ -33,19 +33,19 @@ Account acc = (Account) AccountTestModule.Mocker()
     .build();
 
 // No database operation - acc.Id is null
-System.assertEquals(null, acc.Id);
-System.assertEquals('Mock Account', acc.Name);
+Assert.isNull(acc.Id);
+Assert.areEqual('Mock Account', acc.Name);
 ```
 
 ### Multiple Records
 
 ```apex
-List<Account> accounts = AccountTestModule.Mocker()
+List<SObject> accounts = AccountTestModule.Mocker()
     .set(Account.Industry, 'Technology')
     .build(10);
 
 // 10 in-memory records
-System.assertEquals(10, accounts.size());
+Assert.areEqual(10, accounts.size());
 ```
 
 ## Setting Field Values
@@ -82,25 +82,32 @@ Account acc = (Account) AccountTestModule.Mocker()
     .build();
 
 // Has a valid ID format: 001000000000001
-System.assertNotEquals(null, acc.Id);
-System.assert(String.valueOf(acc.Id).startsWith('001'));
+Assert.isNotNull(acc.Id);
+Assert.isTrue(String.valueOf(acc.Id).startsWith('001'));
 ```
 
-### Multiple Records with Fake IDs
+### Unique IDs Across Calls
 
-Each record gets a unique fake ID:
+Each call to `setFakeId()` generates a unique ID:
 
 ```apex
-List<Account> accounts = AccountTestModule.Mocker()
-    .setFakeId()
-    .build(3);
+Account acc1 = (Account) AccountTestModule.Mocker().setFakeId().build();
+Account acc2 = (Account) AccountTestModule.Mocker().setFakeId().build();
 
-// 001000000000001, 001000000000002, 001000000000003
-Set<Id> ids = new Set<Id>();
-for (Account acc : accounts) {
-    ids.add(acc.Id);
-}
-System.assertEquals(3, ids.size());
+// Different IDs
+Assert.areNotEqual(acc1.Id, acc2.Id);
+```
+
+### Static IdGenerator
+
+You can also use the static utility directly:
+
+```apex
+Id accountId = TestModule.IdGenerator.get(Account.SObjectType);
+Id contactId = TestModule.IdGenerator.get(Contact.SObjectType);
+
+Assert.isTrue(String.valueOf(accountId).startsWith('001'));
+Assert.isTrue(String.valueOf(contactId).startsWith('003'));
 ```
 
 ## Parent Relationships
@@ -113,7 +120,7 @@ Account acc = (Account) AccountTestModule.Mocker()
     .build();
 
 // Parent relationship is populated
-System.assertEquals('Parent Corporation', acc.Parent.Name);
+Assert.areEqual('Parent Corporation', acc.Parent.Name);
 ```
 
 ### Implementation
@@ -121,12 +128,6 @@ System.assertEquals('Parent Corporation', acc.Parent.Name);
 ```apex
 public AccountMocker withParentName(String name) {
     super.set('Parent.Name', name);
-    return this;
-}
-
-public AccountMocker withOwner(String ownerName, String ownerEmail) {
-    super.set('Owner.Name', ownerName);
-    super.set('Owner.Email', ownerEmail);
     return this;
 }
 ```
@@ -139,8 +140,22 @@ Contact con = (Contact) ContactTestModule.Mocker()
     .set('Account.Parent.Name', 'Acme Holdings')
     .build();
 
-System.assertEquals('Acme Corp', con.Account.Name);
-System.assertEquals('Acme Holdings', con.Account.Parent.Name);
+Assert.areEqual('Acme Corp', con.Account.Name);
+Assert.areEqual('Acme Holdings', con.Account.Parent.Name);
+```
+
+### Read-Only Fields
+
+You can set read-only fields like `CreatedDate`, `Owner.Name`, etc.:
+
+```apex
+Account acc = (Account) AccountTestModule.Mocker()
+    .setFakeId()
+    .set('CreatedDate', Datetime.newInstance(2025, 1, 15, 10, 30, 0))
+    .set('Owner.Name', 'System Admin')
+    .build();
+
+Assert.areEqual('System Admin', acc.Owner.Name);
 ```
 
 ## Child Relationships
@@ -148,8 +163,8 @@ System.assertEquals('Acme Holdings', con.Account.Parent.Name);
 Mock child record collections:
 
 ```apex
-List<Contact> contacts = ContactTestModule.Mocker()
-    .set(Contact.FirstName, 'Test')
+List<Contact> contacts = (List<Contact>) ContactTestModule.Mocker()
+    .withLastName('Smith')
     .build(3);
 
 Account acc = (Account) AccountTestModule.Mocker()
@@ -157,7 +172,7 @@ Account acc = (Account) AccountTestModule.Mocker()
     .build();
 
 // Child records are accessible
-System.assertEquals(3, acc.Contacts.size());
+Assert.areEqual(3, acc.Contacts.size());
 ```
 
 ### Implementation
@@ -167,42 +182,48 @@ public AccountMocker withContacts(List<Contact> contacts) {
     super.setChildren('Contacts', contacts);
     return this;
 }
-
-public AccountMocker withOpportunities(List<Opportunity> opportunities) {
-    super.setChildren('Opportunities', opportunities);
-    return this;
-}
 ```
 
 ### Multiple Child Relationships
 
 ```apex
-List<Contact> contacts = ContactTestModule.Mocker().build(5);
-List<Opportunity> opps = OpportunityTestModule.Mocker().build(3);
-List<Case> cases = CaseTestModule.Mocker().build(2);
+List<Contact> contacts = (List<Contact>) ContactTestModule.Mocker().build(5);
+List<Opportunity> opps = (List<Opportunity>) OpportunityTestModule.Mocker().build(3);
 
 Account acc = (Account) AccountTestModule.Mocker()
     .setFakeId()
     .withContacts(contacts)
-    .withOpportunities(opps)
-    .setChildren('Cases', cases)
+    .setChildren('Opportunities', opps)
     .build();
 
-System.assertEquals(5, acc.Contacts.size());
-System.assertEquals(3, acc.Opportunities.size());
-System.assertEquals(2, acc.Cases.size());
+Assert.areEqual(5, acc.Contacts.size());
+Assert.areEqual(3, acc.Opportunities.size());
 ```
 
 ## Randomizers with Mocker
 
 ```apex
-List<Account> accounts = AccountTestModule.Mocker()
+List<SObject> accounts = AccountTestModule.Mocker()
     .withRandomIndustry()
     .build(4);
 
 // Industries cycle: Technology, Finance, Healthcare, Retail
-System.assertEquals('Technology', accounts[0].Industry);
-System.assertEquals('Finance', accounts[1].Industry);
+Assert.areEqual('Technology', accounts[0].get('Industry'));
+Assert.areEqual('Finance', accounts[1].get('Industry'));
+```
+
+### Using ListRandomizer
+
+```apex
+List<SObject> accounts = AccountTestModule.Mocker()
+    .withRandomizer(Account.Industry,
+        TestModule.ListRandomizer(new List<Object>{ 'A', 'B' }))
+    .build(4);
+
+Assert.areEqual('A', accounts[0].get('Industry'));
+Assert.areEqual('B', accounts[1].get('Industry'));
+Assert.areEqual('A', accounts[2].get('Industry'));
+Assert.areEqual('B', accounts[3].get('Industry'));
 ```
 
 ## Complete Mocker Example
@@ -232,25 +253,21 @@ public class AccountTestModule implements TestModule.MockerProvider {
             return this;
         }
 
+        // Fake ID
+        public AccountMocker withFakeId() {
+            super.setFakeId();
+            return this;
+        }
+
         // Parent relationships
         public AccountMocker withParentName(String parentName) {
             super.set('Parent.Name', parentName);
             return this;
         }
 
-        public AccountMocker withOwnerName(String ownerName) {
-            super.set('Owner.Name', ownerName);
-            return this;
-        }
-
         // Child relationships
         public AccountMocker withContacts(List<Contact> contacts) {
             super.setChildren('Contacts', contacts);
-            return this;
-        }
-
-        public AccountMocker withOpportunities(List<Opportunity> opportunities) {
-            super.setChildren('Opportunities', opportunities);
             return this;
         }
 
@@ -289,7 +306,7 @@ static void testDiscountCalculation() {
     // Test pure business logic
     Decimal discount = PricingService.calculateDiscount(acc);
 
-    System.assertEquals(0.15, discount);
+    Assert.areEqual(0.15, discount);
 }
 ```
 
@@ -311,7 +328,7 @@ static void testTriggerHandler() {
     // Test trigger logic without DML
     Boolean changed = AccountTriggerHandler.hasRatingChanged(oldAcc, newAcc);
 
-    System.assert(changed);
+    Assert.isTrue(changed);
 }
 ```
 
@@ -320,7 +337,7 @@ static void testTriggerHandler() {
 ```apex
 @IsTest
 static void testDTOMapping() {
-    List<Contact> contacts = ContactTestModule.Mocker().build(3);
+    List<Contact> contacts = (List<Contact>) ContactTestModule.Mocker().build(3);
 
     Account acc = (Account) AccountTestModule.Mocker()
         .setFakeId()
@@ -331,31 +348,29 @@ static void testDTOMapping() {
     // Test mapping logic
     AccountDTO dto = AccountMapper.toDTO(acc);
 
-    System.assertEquals(3, dto.contactCount);
-    System.assertEquals('Holding Company', dto.parentName);
+    Assert.areEqual(3, dto.contactCount);
+    Assert.areEqual('Holding Company', dto.parentName);
 }
 ```
 
-### Mocking Query Results
+### Builder + Mocker Integration
 
 ```apex
 @IsTest
-static void testServiceWithMockedQuery() {
-    // Create mock data as if from SOQL query
-    List<Contact> contacts = ContactTestModule.Mocker()
-        .set(Contact.Email, 'test@example.com')
-        .build(5);
+static void testBuilderThenMocker() {
+    // Create real account in database
+    Account realAccount = (Account) AccountTestModule.Builder()
+        .withName('Real Account')
+        .buildAndInsert();
 
-    Account acc = (Account) AccountTestModule.Mocker()
-        .setFakeId()
-        .set(Account.Name, 'Test Account')
-        .withContacts(contacts)
+    // Create mock contact referencing real account
+    Contact mockContact = (Contact) ContactTestModule.Mocker()
+        .withFakeId()
+        .set('Account.Name', realAccount.Name)
         .build();
 
-    // Test service that processes query results
-    Integer emailCount = AccountService.countContactEmails(acc);
-
-    System.assertEquals(5, emailCount);
+    Assert.isNotNull(realAccount.Id);
+    Assert.areEqual('Real Account', mockContact.Account.Name);
 }
 ```
 

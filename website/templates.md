@@ -41,8 +41,7 @@ Returns a map of named templates:
 public Map<String, SObject> templates() {
     return new Map<String, SObject>{
         'enterprise' => new Account(...),
-        'startup' => new Account(...),
-        'partner' => new Account(...)
+        'startup' => new Account(...)
     };
 }
 ```
@@ -57,8 +56,7 @@ public class Templates implements TestModule.Template {
     public SObject defaultTemplate() {
         return new Account(
             Name = 'Test Account',
-            Industry = 'Technology',
-            BillingCountry = 'USA'
+            Industry = 'Technology'
         );
     }
 
@@ -67,22 +65,12 @@ public class Templates implements TestModule.Template {
             'enterprise' => new Account(
                 Name = 'Enterprise Account',
                 Industry = 'Technology',
-                AnnualRevenue = 1000000,
-                NumberOfEmployees = 500,
-                Rating = 'Hot'
+                AnnualRevenue = 1000000
             ),
             'startup' => new Account(
                 Name = 'Startup Account',
                 Industry = 'Technology',
-                AnnualRevenue = 100000,
-                NumberOfEmployees = 10,
-                Rating = 'Warm'
-            ),
-            'partner' => new Account(
-                Name = 'Partner Account',
-                Type = 'Partner',
-                Industry = 'Consulting',
-                Rating = 'Hot'
+                AnnualRevenue = 100000
             )
         };
     }
@@ -108,11 +96,6 @@ public class AccountBuilder extends TestModule.RecordBuilder {
         super.useTemplate('startup');
         return this;
     }
-
-    public AccountBuilder partner() {
-        super.useTemplate('partner');
-        return this;
-    }
 }
 ```
 
@@ -125,9 +108,8 @@ Account acc = (Account) AccountTestModule.Builder()
     .enterprise()
     .buildAndInsert();
 
-System.assertEquals('Enterprise Account', acc.Name);
-System.assertEquals(1000000, acc.AnnualRevenue);
-System.assertEquals(500, acc.NumberOfEmployees);
+Assert.areEqual('Enterprise Account', acc.Name);
+Assert.areEqual(1000000, acc.AnnualRevenue);
 ```
 
 ### Template with Overrides
@@ -141,9 +123,9 @@ Account acc = (Account) AccountTestModule.Builder()
     .withIndustry('Finance')                // Override industry
     .buildAndInsert();
 
-System.assertEquals('Custom Enterprise Name', acc.Name);
-System.assertEquals('Finance', acc.Industry);
-System.assertEquals(1000000, acc.AnnualRevenue);  // From template
+Assert.areEqual('Custom Enterprise Name', acc.Name);
+Assert.areEqual('Finance', acc.Industry);
+Assert.areEqual(1000000, acc.AnnualRevenue);  // From template
 ```
 
 ### Direct Template Access
@@ -156,63 +138,76 @@ public AccountBuilder useCustomTemplate(String templateName) {
 
 // Usage
 AccountTestModule.Builder()
-    .useCustomTemplate('partner')
+    .useTemplate('startup')
     .buildAndInsert();
 ```
 
-## Template Design Patterns
+## Real-World Examples
 
-### By Business Scenario
+### Account Templates
+
+From `AccountTestModule.cls`:
 
 ```apex
-public Map<String, SObject> templates() {
-    return new Map<String, SObject>{
-        // Size-based
-        'enterprise' => new Account(AnnualRevenue = 1000000, NumberOfEmployees = 500),
-        'mid-market' => new Account(AnnualRevenue = 500000, NumberOfEmployees = 100),
-        'startup' => new Account(AnnualRevenue = 100000, NumberOfEmployees = 10),
+public class Templates implements TestModule.Template {
+    public SObject defaultTemplate() {
+        return new Account(Name = 'Test Account', Industry = 'Technology');
+    }
 
-        // Type-based
-        'customer' => new Account(Type = 'Customer', Rating = 'Hot'),
-        'prospect' => new Account(Type = 'Prospect', Rating = 'Warm'),
-        'partner' => new Account(Type = 'Partner')
-    };
+    public Map<String, SObject> templates() {
+        return new Map<String, SObject>{
+            'enterprise' => new Account(
+                Name = 'Enterprise Account',
+                Industry = 'Technology',
+                AnnualRevenue = 1000000
+            ),
+            'startup' => new Account(
+                Name = 'Startup Account',
+                Industry = 'Technology',
+                AnnualRevenue = 100000
+            )
+        };
+    }
 }
 ```
 
-### By Test Context
+### Contact Templates
+
+From `ContactTestModule.cls`:
 
 ```apex
-public Map<String, SObject> templates() {
-    return new Map<String, SObject>{
-        // For integration tests
-        'integration' => new Account(
-            Name = 'Integration Test Account',
-            BillingStreet = '123 Test St',
-            BillingCity = 'Test City',
-            BillingState = 'CA',
-            BillingPostalCode = '94105',
-            BillingCountry = 'USA'
-        ),
+public class Templates implements TestModule.Template {
+    public SObject defaultTemplate() {
+        return new Contact(
+            FirstName = 'Test',
+            LastName = 'Contact',
+            Email = 'test.contact@example.com'
+        );
+    }
 
-        // For validation tests
-        'minimal' => new Account(Name = 'Minimal Account'),
-
-        // For workflow tests
-        'workflow-trigger' => new Account(
-            Name = 'Workflow Test',
-            Rating = 'Cold',
-            Industry = 'Technology'
-        )
-    };
+    public Map<String, SObject> templates() {
+        return new Map<String, SObject>{
+            'business' => new Contact(
+                FirstName = 'Business',
+                LastName = 'Contact',
+                Email = 'business.contact@example.com'
+            ),
+            'personal' => new Contact(
+                FirstName = 'Personal',
+                LastName = 'Contact',
+                Email = 'personal.contact@example.com'
+            )
+        };
+    }
 }
 ```
 
 ### Opportunity Templates
 
-```apex
-public class OpportunityTemplates implements TestModule.Template {
+From `OpportunityTestModule.cls`:
 
+```apex
+public class Templates implements TestModule.Template {
     public SObject defaultTemplate() {
         return new Opportunity(
             Name = 'Test Opportunity',
@@ -223,29 +218,16 @@ public class OpportunityTemplates implements TestModule.Template {
 
     public Map<String, SObject> templates() {
         return new Map<String, SObject>{
-            'won' => new Opportunity(
-                Name = 'Won Deal',
+            'prospecting' => new Opportunity(
+                Name = 'Prospecting Opportunity',
+                StageName = 'Prospecting',
+                CloseDate = Date.today().addDays(30)
+            ),
+            'closedWon' => new Opportunity(
+                Name = 'Closed Won Opportunity',
                 StageName = 'Closed Won',
                 CloseDate = Date.today(),
-                Probability = 100
-            ),
-            'lost' => new Opportunity(
-                Name = 'Lost Deal',
-                StageName = 'Closed Lost',
-                CloseDate = Date.today(),
-                Probability = 0
-            ),
-            'negotiation' => new Opportunity(
-                Name = 'In Negotiation',
-                StageName = 'Negotiation/Review',
-                CloseDate = Date.today().addDays(14),
-                Probability = 75
-            ),
-            'big-deal' => new Opportunity(
-                Name = 'Big Deal',
-                Amount = 500000,
-                StageName = 'Qualification',
-                CloseDate = Date.today().addDays(90)
+                Amount = 100000
             )
         };
     }
@@ -284,117 +266,37 @@ AccountTestModule.Builder()
 ```apex
 @IsTest
 static void testInvalidTemplate() {
+    Boolean exceptionThrown = false;
     try {
         AccountTestModule.Builder()
             .useTemplate('invalid')
             .build();
-        System.assert(false, 'Should have thrown exception');
     } catch (TestModule.TestModuleException e) {
-        System.assert(e.getMessage().contains('not found'));
+        exceptionThrown = true;
+        Assert.isTrue(e.getMessage().contains('not found'));
     }
+    Assert.isTrue(exceptionThrown);
 }
 ```
 
 ## Templates with Mocker
 
-Templates work the same way with Mocker:
+Templates work the same way with Mocker when using the Template constructor:
 
 ```apex
 public class AccountMocker extends TestModule.RecordMocker {
     public AccountMocker() {
-        super(new Templates());  // Same templates
-    }
-}
-
-// Usage
-Account acc = (Account) AccountTestModule.Mocker()
-    .enterprise()
-    .setFakeId()
-    .build();
-```
-
-## Complete Example
-
-```apex
-@IsTest
-public class AccountTestModule {
-
-    public static AccountBuilder Builder() {
-        return new AccountBuilder();
-    }
-
-    public static AccountMocker Mocker() {
-        return new AccountMocker();
-    }
-
-    public class AccountBuilder extends TestModule.RecordBuilder {
-        public AccountBuilder() {
-            super(new Templates());
-        }
-
-        public AccountBuilder enterprise() {
-            super.useTemplate('enterprise');
-            return this;
-        }
-
-        public AccountBuilder startup() {
-            super.useTemplate('startup');
-            return this;
-        }
-
-        public AccountBuilder partner() {
-            super.useTemplate('partner');
-            return this;
-        }
-    }
-
-    public class AccountMocker extends TestModule.RecordMocker {
-        public AccountMocker() {
-            super(new Templates());
-        }
-
-        // Same template methods...
-    }
-
-    public class Templates implements TestModule.Template {
-        public SObject defaultTemplate() {
-            return new Account(
-                Name = 'Test Account',
-                Industry = 'Technology'
-            );
-        }
-
-        public Map<String, SObject> templates() {
-            return new Map<String, SObject>{
-                'enterprise' => new Account(
-                    Name = 'Enterprise Account',
-                    Industry = 'Technology',
-                    AnnualRevenue = 1000000,
-                    NumberOfEmployees = 500
-                ),
-                'startup' => new Account(
-                    Name = 'Startup Account',
-                    Industry = 'Technology',
-                    AnnualRevenue = 100000,
-                    NumberOfEmployees = 10
-                ),
-                'partner' => new Account(
-                    Name = 'Partner Account',
-                    Type = 'Partner',
-                    Industry = 'Consulting'
-                )
-            };
-        }
+        super(new Account(Name = 'Test Account', Industry = 'Technology'));
     }
 }
 ```
 
 ## Best Practices
 
-1. **Name templates clearly** - Use descriptive names like `enterprise`, `won`, `minimal`
+1. **Name templates clearly** - Use descriptive names like `enterprise`, `closedWon`, `business`
 2. **Keep templates focused** - Each template should represent one scenario
 3. **Allow overrides** - Templates set defaults; allow users to override
 4. **Document templates** - Comment what each template represents
-5. **Share templates** - Use the same Templates class for Builder and Mocker
+5. **Use consistent patterns** - Follow the same naming conventions across modules
 
 [Next: Randomizers →](/randomizers)

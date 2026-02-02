@@ -26,7 +26,7 @@ static void integrationTest() {
     update acc;
 
     Account reloaded = [SELECT Rating FROM Account WHERE Id = :acc.Id];
-    System.assertEquals('Hot', reloaded.Rating);
+    Assert.areEqual('Hot', reloaded.Rating);
 }
 ```
 
@@ -50,7 +50,7 @@ static void unitTest() {
 
     // Test pure logic without database
     String tier = AccountClassifier.getTier(acc);
-    System.assertEquals('Enterprise', tier);
+    Assert.areEqual('Enterprise', tier);
 }
 ```
 
@@ -86,15 +86,14 @@ public AccountBuilder enterprise() {
     return this;
 }
 
-public AccountBuilder active() {
-    super.set(Account.IsActive__c, true);
+public OpportunityBuilder closedWon() {
+    super.useTemplate('closedWon');
     return this;
 }
 
 // Usage reads like a sentence
 AccountTestModule.Builder()
     .enterprise()
-    .active()
     .buildAndInsert();
 ```
 
@@ -102,16 +101,14 @@ AccountTestModule.Builder()
 
 ```apex
 // Good - sets related fields together
-public OpportunityBuilder wonDeal(Decimal amount) {
-    super.set(Opportunity.StageName, 'Closed Won');
-    super.set(Opportunity.Amount, amount);
-    super.set(Opportunity.CloseDate, Date.today());
+public OpportunityBuilder closedWon() {
+    super.useTemplate('closedWon');  // Sets StageName, CloseDate, Amount
     return this;
 }
 
 // Usage
 OpportunityTestModule.Builder()
-    .wonDeal(100000)
+    .closedWon()
     .buildAndInsert();
 ```
 
@@ -130,27 +127,13 @@ public class Templates implements TestModule.Template {
 
     public Map<String, SObject> templates() {
         return new Map<String, SObject>{
-            // Business scenarios
             'enterprise' => new Account(
                 Name = 'Enterprise Account',
-                AnnualRevenue = 1000000,
-                NumberOfEmployees = 500
+                AnnualRevenue = 1000000
             ),
             'startup' => new Account(
                 Name = 'Startup Account',
-                AnnualRevenue = 100000,
-                NumberOfEmployees = 10
-            ),
-
-            // Account types
-            'partner' => new Account(
-                Name = 'Partner Account',
-                Type = 'Partner'
-            ),
-            'prospect' => new Account(
-                Name = 'Prospect Account',
-                Type = 'Prospect',
-                Rating = 'Warm'
+                AnnualRevenue = 100000
             )
         };
     }
@@ -167,40 +150,42 @@ static void testEnterpriseWithCustomName() {
         .withName('Custom Corp')         // Override specific field
         .buildAndInsert();
 
-    System.assertEquals('Custom Corp', acc.Name);
-    System.assertEquals(1000000, acc.AnnualRevenue);
+    Assert.areEqual('Custom Corp', acc.Name);
+    Assert.areEqual(1000000, acc.AnnualRevenue);
 }
 ```
 
-## Randomizers for Bulk Data
+## Implement RecordRandomizer Correctly
 
-### Use for Unique Values
+### Return Map of FieldRandomizers
 
 ```apex
-@IsTest
-static void testBulkAccountCreation() {
-    List<Account> accounts = AccountTestModule.Builder()
-        .withAccountRandomizer()
-        .buildAndInsert(100);
-
-    // Each account has unique name
-    Set<String> names = new Set<String>();
-    for (Account acc : accounts) {
-        names.add(acc.Name);
+public class AccountRandomizer implements TestModule.RecordRandomizer {
+    public Map<SObjectField, TestModule.FieldRandomizer> randomizers() {
+        return new Map<SObjectField, TestModule.FieldRandomizer>{
+            Account.Name => new CompanyNameRandomizer(),
+            Account.Industry => new IndustryRandomizer()
+        };
     }
-    System.assertEquals(100, names.size());
 }
 ```
 
-### Create Reusable Randomizers
+### Create Reusable FieldRandomizers
 
 ```apex
-public class PhoneRandomizer implements TestModule.FieldRandomizer {
+public class CompanyNameRandomizer implements TestModule.FieldRandomizer {
     public Object generate(Integer index) {
-        String areaCode = String.valueOf(100 + Math.mod(index, 900));
-        String prefix = String.valueOf(100 + Math.mod(index * 7, 900));
-        String suffix = String.valueOf(1000 + index);
-        return '(' + areaCode + ') ' + prefix + '-' + suffix;
+        return 'Company ' + (index + 1);
+    }
+}
+
+public class IndustryRandomizer implements TestModule.FieldRandomizer {
+    private List<String> industries = new List<String>{
+        'Technology', 'Finance', 'Healthcare', 'Retail'
+    };
+
+    public Object generate(Integer index) {
+        return industries[Math.mod(index, industries.size())];
     }
 }
 ```
@@ -213,12 +198,12 @@ public class PhoneRandomizer implements TestModule.FieldRandomizer {
 @IsTest
 static void testWithParentData() {
     Contact con = (Contact) ContactTestModule.Mocker()
-        .setFakeId()
+        .withFakeId()
         .set('Account.Name', 'Parent Account')
         .set('Account.Industry', 'Technology')
         .build();
 
-    System.assertEquals('Parent Account', con.Account.Name);
+    Assert.areEqual('Parent Account', con.Account.Name);
 }
 ```
 
@@ -227,17 +212,14 @@ static void testWithParentData() {
 ```apex
 @IsTest
 static void testWithChildData() {
-    List<Contact> contacts = ContactTestModule.Mocker().build(5);
-    List<Opportunity> opps = OpportunityTestModule.Mocker().build(3);
+    List<Contact> contacts = (List<Contact>) ContactTestModule.Mocker().build(5);
 
     Account acc = (Account) AccountTestModule.Mocker()
         .setFakeId()
         .setChildren('Contacts', contacts)
-        .setChildren('Opportunities', opps)
         .build();
 
-    System.assertEquals(5, acc.Contacts.size());
-    System.assertEquals(3, acc.Opportunities.size());
+    Assert.areEqual(5, acc.Contacts.size());
 }
 ```
 
@@ -246,12 +228,10 @@ static void testWithChildData() {
 ### One Module Per SObject
 
 ```
-test-module/
-├── TestModule.cls              # Framework
-└── concrete-modules/
-    ├── AccountTestModule.cls   # Account builders
-    ├── ContactTestModule.cls   # Contact builders
-    └── OpportunityTestModule.cls
+concrete-modules/
+├── AccountTestModule.cls
+├── ContactTestModule.cls
+└── OpportunityTestModule.cls
 ```
 
 ### Consistent Naming
@@ -265,6 +245,10 @@ public class AccountBuilder extends TestModule.RecordBuilder { ... }
 
 // Mocker: {SObject}Mocker
 public class AccountMocker extends TestModule.RecordMocker { ... }
+
+// Randomizer: {SObject}Randomizer or {Field}Randomizer
+public class AccountRandomizer implements TestModule.RecordRandomizer { ... }
+public class IndustryRandomizer implements TestModule.FieldRandomizer { ... }
 ```
 
 ## Performance Tips
@@ -294,7 +278,7 @@ static void fastTest() {
 
 ```apex
 // Good - single DML
-List<Account> accounts = AccountTestModule.Builder()
+List<SObject> accounts = AccountTestModule.Builder()
     .buildAndInsert(100);
 
 // Avoid - multiple DML
@@ -337,14 +321,16 @@ private class AccountServiceTest {
 ```apex
 @IsTest
 static void testMissingTemplate() {
+    Boolean exceptionThrown = false;
     try {
         AccountTestModule.Builder()
             .useTemplate('nonexistent')
             .build();
-        System.assert(false, 'Should have thrown exception');
     } catch (TestModule.TestModuleException e) {
-        System.assert(e.getMessage().contains('not found'));
+        exceptionThrown = true;
+        Assert.isTrue(e.getMessage().contains('not found'));
     }
+    Assert.isTrue(exceptionThrown, 'Expected TestModuleException');
 }
 ```
 
@@ -357,9 +343,8 @@ static void testMissingTemplate() {
  * Test data builder for Account records.
  *
  * Templates:
- * - enterprise: Large company with 500+ employees
- * - startup: Small company with <50 employees
- * - partner: Partner account type
+ * - enterprise: Large company with $1M+ revenue
+ * - startup: Small company with $100K revenue
  *
  * @example
  * Account acc = (Account) AccountTestModule.Builder()

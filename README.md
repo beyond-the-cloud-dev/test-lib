@@ -29,7 +29,7 @@ For comprehensive documentation, visit [https://beyond-the-cloud-dev.github.io/t
 - **Randomizers** - Generate unique field values for bulk data creation
 - **Parent Relations** - Mock parent lookups (e.g., `Account.Parent.Name`)
 - **Child Relations** - Mock child collections (e.g., `Account.Contacts`)
-- **Fake IDs** - Generate valid-looking IDs without database operations
+- **Fake IDs** - Generate valid-looking IDs via `TestModule.IdGenerator`
 
 ## Quick Start
 
@@ -49,8 +49,8 @@ static void testWithRealRecords() {
         .withAccountRandomizer()
         .buildAndInsert(100);
 
-    System.assertNotEquals(null, acc.Id);
-    System.assertEquals(100, accounts.size());
+    Assert.isNotNull(acc.Id);
+    Assert.areEqual(100, accounts.size());
 }
 ```
 
@@ -70,13 +70,13 @@ static void testWithMockedRecords() {
         .build();
 
     // Mock with child records
-    List<Contact> contacts = ContactTestModule.Mocker().build(3);
+    List<Contact> contacts = (List<Contact>) ContactTestModule.Mocker().build(3);
     Account accWithContacts = (Account) AccountTestModule.Mocker()
         .withContacts(contacts)
         .build();
 
-    System.assertEquals('Parent Corp', accWithParent.Parent.Name);
-    System.assertEquals(3, accWithContacts.Contacts.size());
+    Assert.areEqual('Parent Corp', accWithParent.Parent.Name);
+    Assert.areEqual(3, accWithContacts.Contacts.size());
 }
 ```
 
@@ -124,7 +124,7 @@ npm run docs:dev
 ## Project Structure
 
 ```
-force-app/main/default/classes/test-module/
+force-app/main/default/classes/
 ├── TestModule.cls                    # Core framework
 ├── TestModule.cls-meta.xml
 ├── TestModule_Test.cls               # Framework tests
@@ -151,7 +151,7 @@ public class AccountTestModule {
 
     public class AccountBuilder extends TestModule.RecordBuilder {
         public AccountBuilder() {
-            super(new Account(Name = 'Test Account'));
+            super(new Templates());
         }
 
         public AccountBuilder withName(String name) {
@@ -159,20 +159,38 @@ public class AccountTestModule {
             return this;
         }
 
-        public AccountBuilder withIndustry(String industry) {
-            super.set(Account.Industry, industry);
+        public AccountBuilder enterprise() {
+            super.useTemplate('enterprise');
             return this;
         }
     }
 
     public class AccountMocker extends TestModule.RecordMocker {
         public AccountMocker() {
-            super(new Account(Name = 'Test Account'));
+            super(new Account(Name = 'Test Account', Industry = 'Technology'));
         }
 
         public AccountMocker withContacts(List<Contact> contacts) {
             super.setChildren('Contacts', contacts);
             return this;
+        }
+
+        public AccountMocker withParentName(String parentName) {
+            super.set('Parent.Name', parentName);
+            return this;
+        }
+    }
+
+    public class Templates implements TestModule.Template {
+        public SObject defaultTemplate() {
+            return new Account(Name = 'Test Account', Industry = 'Technology');
+        }
+
+        public Map<String, SObject> templates() {
+            return new Map<String, SObject>{
+                'enterprise' => new Account(Name = 'Enterprise Account', AnnualRevenue = 1000000),
+                'startup' => new Account(Name = 'Startup Account', AnnualRevenue = 100000)
+            };
         }
     }
 }
@@ -184,8 +202,10 @@ public class AccountTestModule {
 // Builder - creates real records for database insertion
 public interface Builder {
     Builder set(SObjectField field, Object value);
+    Builder set(String field, Object value);
     Builder useTemplate(String templateName);
-    Builder withRandomizer(Randomizer randomizer);
+    Builder withRandomizer(TestModule.RecordRandomizer randomizer);
+    Builder withRandomizer(SObjectField field, TestModule.FieldRandomizer randomizer);
     SObject build();
     SObject buildAndInsert();
     List<SObject> build(Integer amount);
@@ -195,10 +215,23 @@ public interface Builder {
 // Mocker - creates in-memory records without DML
 public interface Mocker {
     Mocker set(SObjectField field, Object value);
+    Mocker set(String field, Object value);  // Supports dot notation for parent relationships
     Mocker setChildren(String relationship, List<SObject> children);
     Mocker setFakeId();
+    Mocker withRandomizer(TestModule.RecordRandomizer randomizer);
+    Mocker withRandomizer(SObjectField field, TestModule.FieldRandomizer randomizer);
     SObject build();
     List<SObject> build(Integer amount);
+}
+
+// FieldRandomizer - generates values for a single field
+public interface FieldRandomizer {
+    Object generate(Integer index);
+}
+
+// RecordRandomizer - generates values for multiple fields
+public interface RecordRandomizer {
+    Map<SObjectField, TestModule.FieldRandomizer> randomizers();
 }
 ```
 

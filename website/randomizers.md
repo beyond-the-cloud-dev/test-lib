@@ -26,7 +26,7 @@ The `index` parameter indicates which record is being generated (0-based).
 ### Basic Implementation
 
 ```apex
-public class NameRandomizer implements TestModule.FieldRandomizer {
+public class CompanyNameRandomizer implements TestModule.FieldRandomizer {
     public Object generate(Integer index) {
         return 'Company ' + (index + 1);
     }
@@ -51,85 +51,48 @@ public class IndustryRandomizer implements TestModule.FieldRandomizer {
 // Generates: Technology, Finance, Healthcare, Retail, Technology, ...
 ```
 
-## Randomizer Interface
+## RecordRandomizer Interface
 
-For generating multiple field values at once:
+For generating values for multiple fields at once:
 
 ```apex
-public interface Randomizer {
-    Map<SObjectField, Object> generate(Integer index);
+public interface RecordRandomizer {
+    Map<SObjectField, TestModule.FieldRandomizer> randomizers();
 }
 ```
 
-### Direct Implementation
-
-```apex
-public class AccountRandomizer implements TestModule.Randomizer {
-    public Map<SObjectField, Object> generate(Integer index) {
-        return new Map<SObjectField, Object>{
-            Account.Name => 'Company ' + (index + 1),
-            Account.Industry => getIndustry(index),
-            Account.AnnualRevenue => (index + 1) * 100000
-        };
-    }
-
-    private String getIndustry(Integer index) {
-        List<String> industries = new List<String>{
-            'Technology', 'Finance', 'Healthcare'
-        };
-        return industries[Math.mod(index, industries.size())];
-    }
-}
-```
-
-## RecordRandomizer Class
-
-A helper class for composing multiple FieldRandomizers:
+### Implementation
 
 ```apex
 public class AccountRandomizer implements TestModule.RecordRandomizer {
-    public AccountRandomizer() {
-        this.add(Account.Name, new NameRandomizer());
-        this.add(Account.Industry, new IndustryRandomizer());
-        this.add(Account.AnnualRevenue, new RevenueRandomizer());
-    }
-}
-```
-
-### Chaining Randomizers
-
-```apex
-public class FullAccountRandomizer implements TestModule.RecordRandomizer {
-    public FullAccountRandomizer() {
-        // Base randomizer
-        this.setParent(new BasicAccountRandomizer());
-
-        // Additional fields
-        this.add(Account.Phone, new PhoneRandomizer());
-        this.add(Account.Website, new WebsiteRandomizer());
+    public Map<SObjectField, TestModule.FieldRandomizer> randomizers() {
+        return new Map<SObjectField, TestModule.FieldRandomizer>{
+            Account.Name => new CompanyNameRandomizer(),
+            Account.Industry => new IndustryRandomizer()
+        };
     }
 }
 ```
 
 ## Built-in ListRandomizer
 
-Cycles through a predefined list of values:
+The `TestModule.ListRandomizer` cycles through a list of values:
 
 ```apex
-new TestModule.ListRandomizer(new List<Object>{
-    'Technology', 'Finance', 'Healthcare', 'Retail'
-})
+// Using static factory method
+TestModule.ListRandomizer(new List<Object>{ 'Technology', 'Finance', 'Healthcare' })
 
 // Usage
-AccountTestModule.Builder()
+List<SObject> accounts = AccountTestModule.Builder()
     .withRandomizer(Account.Industry,
-        new TestModule.ListRandomizer(new List<Object>{
-            'Technology', 'Finance', 'Healthcare'
-        })
-    )
+        TestModule.ListRandomizer(new List<Object>{ 'Tech', 'Finance', 'Health' }))
     .build(6);
 
-// Generates: Technology, Finance, Healthcare, Technology, Finance, Healthcare
+// Generates: Tech, Finance, Health, Tech, Finance, Health
+Assert.areEqual('Tech', accounts[0].get('Industry'));
+Assert.areEqual('Finance', accounts[1].get('Industry'));
+Assert.areEqual('Health', accounts[2].get('Industry'));
+Assert.areEqual('Tech', accounts[3].get('Industry'));
 ```
 
 ## Using Randomizers
@@ -151,7 +114,7 @@ public class AccountBuilder extends TestModule.RecordBuilder {
 }
 
 // Usage
-List<Account> accounts = AccountTestModule.Builder()
+List<SObject> accounts = AccountTestModule.Builder()
     .withAccountRandomizer()
     .buildAndInsert(100);
 ```
@@ -168,9 +131,25 @@ public class AccountMocker extends TestModule.RecordMocker {
 }
 
 // Usage
-List<Account> accounts = AccountTestModule.Mocker()
+List<SObject> accounts = AccountTestModule.Mocker()
     .withRandomIndustry()
     .build(10);
+```
+
+### Combining Randomizers
+
+You can combine a RecordRandomizer with additional FieldRandomizers:
+
+```apex
+List<SObject> accounts = AccountTestModule.Builder()
+    .withRandomizer(new AccountRandomizer())
+    .withRandomizer(Account.Industry,
+        TestModule.ListRandomizer(new List<Object>{ 'Override' }))
+    .build(2);
+
+// FieldRandomizer overrides the RecordRandomizer for Industry
+Assert.areEqual('Company 0', accounts[0].get('Name'));  // From AccountRandomizer
+Assert.areEqual('Override', accounts[0].get('Industry'));  // From ListRandomizer
 ```
 
 ## Common Randomizer Patterns
@@ -179,39 +158,19 @@ List<Account> accounts = AccountTestModule.Mocker()
 
 ```apex
 public class CompanyNameRandomizer implements TestModule.FieldRandomizer {
-    private String prefix;
-
-    public CompanyNameRandomizer() {
-        this.prefix = 'Company';
-    }
-
-    public CompanyNameRandomizer(String prefix) {
-        this.prefix = prefix;
-    }
-
     public Object generate(Integer index) {
-        return prefix + ' ' + (index + 1);
+        return 'Company ' + (index + 1);
     }
 }
 
 // Company 1, Company 2, Company 3...
-// or with custom prefix:
-// Acme 1, Acme 2, Acme 3...
 ```
 
 ### Email Generator
 
 ```apex
 public class EmailRandomizer implements TestModule.FieldRandomizer {
-    private String domain;
-
-    public EmailRandomizer() {
-        this.domain = 'example.com';
-    }
-
-    public EmailRandomizer(String domain) {
-        this.domain = domain;
-    }
+    private String domain = 'example.com';
 
     public Object generate(Integer index) {
         return 'user' + (index + 1) + '@' + domain;
@@ -221,120 +180,122 @@ public class EmailRandomizer implements TestModule.FieldRandomizer {
 // user1@example.com, user2@example.com...
 ```
 
-### Phone Number Generator
-
-```apex
-public class PhoneRandomizer implements TestModule.FieldRandomizer {
-    public Object generate(Integer index) {
-        String areaCode = String.valueOf(100 + Math.mod(index, 900)).leftPad(3, '0');
-        String prefix = String.valueOf(100 + Math.mod(index * 7, 900)).leftPad(3, '0');
-        String suffix = String.valueOf(1000 + index).leftPad(4, '0');
-        return '(' + areaCode + ') ' + prefix + '-' + suffix;
-    }
-}
-
-// (100) 100-1000, (101) 107-1001...
-```
-
-### Date Generator
-
-```apex
-public class CloseDateRandomizer implements TestModule.FieldRandomizer {
-    private Date baseDate;
-    private Integer dayIncrement;
-
-    public CloseDateRandomizer() {
-        this.baseDate = Date.today();
-        this.dayIncrement = 7;
-    }
-
-    public Object generate(Integer index) {
-        return baseDate.addDays(index * dayIncrement);
-    }
-}
-
-// Today, Today+7, Today+14, Today+21...
-```
-
 ### Amount Generator
 
 ```apex
 public class AmountRandomizer implements TestModule.FieldRandomizer {
-    private Decimal baseAmount;
-    private Decimal multiplier;
-
-    public AmountRandomizer() {
-        this.baseAmount = 10000;
-        this.multiplier = 1.5;
-    }
-
     public Object generate(Integer index) {
-        return baseAmount * Math.pow(multiplier, index);
+        return (index + 1) * 50000;
     }
 }
 
-// 10000, 15000, 22500, 33750...
+// 50000, 100000, 150000...
 ```
 
-### Picklist Cycler
+### First/Last Name Randomizers
 
 ```apex
-public class StageRandomizer implements TestModule.FieldRandomizer {
-    private List<String> stages = new List<String>{
-        'Prospecting',
-        'Qualification',
-        'Needs Analysis',
-        'Value Proposition',
-        'Negotiation',
-        'Closed Won'
-    };
-
-    public Object generate(Integer index) {
-        return stages[Math.mod(index, stages.size())];
-    }
-}
-```
-
-## Composite Randomizer Example
-
-```apex
-public class FullContactRandomizer implements TestModule.RecordRandomizer {
-    public FullContactRandomizer() {
-        this.add(Contact.FirstName, new FirstNameRandomizer());
-        this.add(Contact.LastName, new LastNameRandomizer());
-        this.add(Contact.Email, new EmailRandomizer());
-        this.add(Contact.Phone, new PhoneRandomizer());
-        this.add(Contact.Title, new TitleRandomizer());
-    }
-}
-
 public class FirstNameRandomizer implements TestModule.FieldRandomizer {
-    private List<String> names = new List<String>{
-        'John', 'Jane', 'Bob', 'Alice', 'Charlie', 'Diana'
+    private List<String> firstNames = new List<String>{
+        'John', 'Jane', 'Bob', 'Alice'
     };
 
     public Object generate(Integer index) {
-        return names[Math.mod(index, names.size())];
+        return firstNames[Math.mod(index, firstNames.size())];
     }
 }
 
 public class LastNameRandomizer implements TestModule.FieldRandomizer {
-    private List<String> names = new List<String>{
-        'Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia'
-    };
-
     public Object generate(Integer index) {
-        return names[Math.mod(index, names.size())];
+        return 'Contact ' + (index + 1);
     }
 }
+```
 
-public class TitleRandomizer implements TestModule.FieldRandomizer {
-    private List<String> titles = new List<String>{
-        'CEO', 'CTO', 'CFO', 'VP Sales', 'Director', 'Manager'
-    };
+## Complete Example
 
-    public Object generate(Integer index) {
-        return titles[Math.mod(index, titles.size())];
+```apex
+@IsTest
+public class ContactTestModule implements TestModule.BuilderProvider, TestModule.MockerProvider {
+
+    public static ContactBuilder Builder() {
+        return new ContactBuilder();
+    }
+
+    public static ContactMocker Mocker() {
+        return new ContactMocker();
+    }
+
+    public class ContactBuilder extends TestModule.RecordBuilder {
+        public ContactBuilder() {
+            super(new Templates());
+        }
+
+        public ContactBuilder withContactRandomizer() {
+            super.withRandomizer(new ContactRandomizer());
+            return this;
+        }
+    }
+
+    public class ContactMocker extends TestModule.RecordMocker {
+        public ContactMocker() {
+            super(new Contact(FirstName = 'Test', LastName = 'Contact'));
+        }
+
+        public ContactMocker withContactRandomizer() {
+            super.withRandomizer(new ContactRandomizer());
+            return this;
+        }
+    }
+
+    public class Templates implements TestModule.Template {
+        public SObject defaultTemplate() {
+            return new Contact(
+                FirstName = 'Test',
+                LastName = 'Contact',
+                Email = 'test.contact@example.com'
+            );
+        }
+
+        public Map<String, SObject> templates() {
+            return new Map<String, SObject>{
+                'business' => new Contact(
+                    FirstName = 'Business',
+                    LastName = 'Contact',
+                    Email = 'business.contact@example.com'
+                ),
+                'personal' => new Contact(
+                    FirstName = 'Personal',
+                    LastName = 'Contact',
+                    Email = 'personal.contact@example.com'
+                )
+            };
+        }
+    }
+
+    public class ContactRandomizer implements TestModule.RecordRandomizer {
+        public Map<SObjectField, TestModule.FieldRandomizer> randomizers() {
+            return new Map<SObjectField, TestModule.FieldRandomizer>{
+                Contact.FirstName => new FirstNameRandomizer(),
+                Contact.LastName => new LastNameRandomizer()
+            };
+        }
+    }
+
+    public class FirstNameRandomizer implements TestModule.FieldRandomizer {
+        private List<String> firstNames = new List<String>{
+            'John', 'Jane', 'Bob', 'Alice'
+        };
+
+        public Object generate(Integer index) {
+            return firstNames[Math.mod(index, firstNames.size())];
+        }
+    }
+
+    public class LastNameRandomizer implements TestModule.FieldRandomizer {
+        public Object generate(Integer index) {
+            return 'Contact ' + (index + 1);
+        }
     }
 }
 ```
@@ -346,33 +307,13 @@ public class TitleRandomizer implements TestModule.FieldRandomizer {
 ```apex
 @IsTest
 static void testBulkAccounts() {
-    List<Account> accounts = AccountTestModule.Builder()
+    List<SObject> accounts = AccountTestModule.Builder()
         .withAccountRandomizer()
         .buildAndInsert(100);
 
-    // Verify unique names
-    Set<String> names = new Set<String>();
-    for (Account acc : accounts) {
-        names.add(acc.Name);
-    }
-    System.assertEquals(100, names.size());
-}
-```
-
-### Mixed Randomizers
-
-```apex
-@IsTest
-static void testMixedRandomizers() {
-    List<Account> accounts = AccountTestModule.Builder()
-        .enterprise()                    // Base template
-        .withRandomizer(Account.Name,    // Override name
-            new CompanyNameRandomizer('Enterprise'))
-        .withRandomIndustry()            // Random industry
-        .buildAndInsert(10);
-
-    System.assertEquals('Enterprise 1', accounts[0].Name);
-    System.assertEquals('Enterprise 2', accounts[1].Name);
+    Assert.areEqual(100, accounts.size());
+    Assert.areEqual('Company 1', accounts[0].get('Name'));
+    Assert.areEqual('Company 100', accounts[99].get('Name'));
 }
 ```
 
@@ -385,13 +326,13 @@ static void testRelatedRecords() {
         .enterprise()
         .buildAndInsert();
 
-    List<Contact> contacts = ContactTestModule.Builder()
-        .withAccount(acc.Id)
-        .withRandomizer(new FullContactRandomizer())
+    List<SObject> contacts = ContactTestModule.Builder()
+        .set(Contact.AccountId, acc.Id)
+        .withContactRandomizer()
         .buildAndInsert(5);
 
-    System.assertEquals(5, contacts.size());
-    // Each contact has unique name, email, phone, title
+    Assert.areEqual(5, contacts.size());
+    // John Contact 1, Jane Contact 2, Bob Contact 3, Alice Contact 4, John Contact 5
 }
 ```
 
@@ -401,6 +342,6 @@ static void testRelatedRecords() {
 2. **Use meaningful values** - Generate realistic data
 3. **Consider uniqueness** - Ensure generated values don't cause duplicates
 4. **Make reusable** - Create generic randomizers for common patterns
-5. **Test your randomizers** - Verify they generate expected values
+5. **Implement RecordRandomizer** - When you need to randomize multiple related fields
 
 [API Reference →](/api)

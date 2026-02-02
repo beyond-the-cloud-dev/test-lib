@@ -27,7 +27,7 @@ features:
 
   - icon: 📋
     title: Templates
-    details: Define reusable record templates for common scenarios like "enterprise account" or "startup account".
+    details: Define reusable record templates for common scenarios like "enterprise account" or "closedWon opportunity".
 
   - icon: 🎲
     title: Randomizers
@@ -79,7 +79,7 @@ static void testAccountProcessing() {
         .buildAndInsert();
 
     Contact con = (Contact) ContactTestModule.Builder()
-        .withAccount(acc.Id)
+        .set(Contact.AccountId, acc.Id)
         .buildAndInsert();
 
     // Test logic...
@@ -104,7 +104,7 @@ Account acc = (Account) AccountTestModule.Builder()
     .buildAndInsert();
 
 // Multiple records with unique values
-List<Account> accounts = AccountTestModule.Builder()
+List<SObject> accounts = AccountTestModule.Builder()
     .withAccountRandomizer()
     .buildAndInsert(100);
 ```
@@ -125,9 +125,9 @@ Account acc = (Account) AccountTestModule.Mocker()
     .build();
 
 // Mock with child records
-List<Contact> contacts = ContactTestModule.Mocker().build(3);
+List<SObject> contacts = ContactTestModule.Mocker().build(3);
 Account acc = (Account) AccountTestModule.Mocker()
-    .withContacts(contacts)
+    .withContacts((List<Contact>) contacts)
     .build();
 ```
 
@@ -145,30 +145,30 @@ private class OpportunityServiceTest {
             .buildAndInsert();
 
         Opportunity opp = (Opportunity) OpportunityTestModule.Builder()
-            .withAccount(acc.Id)
+            .set(Opportunity.AccountId, acc.Id)
             .withAmount(100000)
-            .withProbability(75)
+            .closedWon()
             .buildAndInsert();
 
         // Act
         Decimal revenue = OpportunityService.calculateExpectedRevenue(opp.Id);
 
         // Assert
-        Assert.areEqual(75000, revenue);
+        Assert.areEqual(100000, revenue);
     }
 
     @IsTest
     static void shouldProcessOpportunityWithMockedData() {
         // Arrange - Use Mocker for unit tests (no DML)
         Opportunity opp = (Opportunity) OpportunityTestModule.Mocker()
-            .setFakeId()
-            .set(Opportunity.Amount, 100000)
-            .set(Opportunity.Probability, 75)
+            .withFakeId()
+            .withAmount(100000)
+            .withStageName('Closed Won')
             .build();
 
         // Act & Assert - Test pure logic without database
-        Decimal expected = OpportunityService.calculateExpected(opp);
-        Assert.areEqual(75000, expected);
+        Boolean isClosed = OpportunityService.isClosed(opp);
+        Assert.isTrue(isClosed);
     }
 }
 ```
@@ -179,10 +179,10 @@ private class OpportunityServiceTest {
 - **Mocker Pattern** - Create in-memory records without DML
 - **Templates** - Reusable record configurations
 - **Randomizers** - Generate unique field values for bulk creation
-- **Type Safety** - Compile-time field validation
+- **Type Safety** - Compile-time field validation with SObjectField tokens
 - **Parent Relations** - Mock parent lookups (e.g., `Account.Parent.Name`)
 - **Child Relations** - Mock child collections (e.g., `Account.Contacts`)
-- **Fake IDs** - Generate valid-looking IDs without database
+- **Fake IDs** - Generate valid-looking IDs via `TestModule.IdGenerator`
 
 ## Part of Beyond The Cloud
 

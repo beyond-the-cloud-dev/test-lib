@@ -21,7 +21,7 @@ If you only want the core framework:
 
 ```bash
 sf project deploy start \
-  --source-dir force-app/main/default/classes/test-module \
+  --source-dir force-app/main/default/classes \
   --target-org your-org-alias
 ```
 
@@ -31,19 +31,8 @@ sf project deploy start \
 
 1. Navigate to **Setup** → **Apex Classes**
 2. Click **New**
-3. Copy the code from [TestModule.cls](https://github.com/beyond-the-cloud-dev/test-lib/blob/main/force-app/main/default/classes/test-module/TestModule.cls)
+3. Copy the code from [TestModule.cls](https://github.com/beyond-the-cloud-dev/test-lib/blob/main/force-app/main/default/classes/TestModule.cls)
 4. Save the class
-
-## Package Installation
-
-### Unlocked Package (Recommended)
-
-```bash
-sf package install \
-  --package "Test Lib@1.0.0" \
-  --target-org your-org-alias \
-  --wait 10
-```
 
 ## Dependencies
 
@@ -62,32 +51,55 @@ Test the installation by creating a simple test:
 private class TestLibVerification {
 
     @IsTest
-    static void shouldCreateFakeId() {
+    static void shouldGenerateFakeId() {
         // Test fakeId generation
-        Id fakeAccountId = TestModule.fakeId(Account.SObjectType);
+        Id fakeAccountId = TestModule.IdGenerator.get(Account.SObjectType);
 
-        System.assertNotEquals(null, fakeAccountId);
-        System.assertEquals('001', String.valueOf(fakeAccountId).substring(0, 3));
+        Assert.isNotNull(fakeAccountId);
+        Assert.isTrue(String.valueOf(fakeAccountId).startsWith('001'));
+    }
+
+    @IsTest
+    static void shouldBuildAccount() {
+        // Test basic builder
+        Account acc = (Account) AccountTestModule.Builder()
+            .withName('Test Account')
+            .build();
+
+        Assert.areEqual('Test Account', acc.Name);
+    }
+
+    @IsTest
+    static void shouldMockAccount() {
+        // Test basic mocker
+        Account acc = (Account) AccountTestModule.Mocker()
+            .setFakeId()
+            .build();
+
+        Assert.isNotNull(acc.Id);
     }
 }
 ```
 
-If the test passes, you're all set!
+If the tests pass, you're all set!
 
 ## Project Structure
 
 After installation, you'll have:
 
 ```
-force-app/main/default/classes/test-module/
+force-app/main/default/classes/
 ├── TestModule.cls                    # Core framework
 ├── TestModule.cls-meta.xml
 ├── TestModule_Test.cls               # Framework tests
 ├── TestModule_Test.cls-meta.xml
 └── concrete-modules/                 # Example implementations
     ├── AccountTestModule.cls
+    ├── AccountTestModule.cls-meta.xml
     ├── ContactTestModule.cls
-    └── OpportunityTestModule.cls
+    ├── ContactTestModule.cls-meta.xml
+    ├── OpportunityTestModule.cls
+    └── OpportunityTestModule.cls-meta.xml
 ```
 
 ## Creating Your First Module
@@ -102,6 +114,10 @@ public class AccountTestModule {
         return new AccountBuilder();
     }
 
+    public static AccountMocker Mocker() {
+        return new AccountMocker();
+    }
+
     public class AccountBuilder extends TestModule.RecordBuilder {
         public AccountBuilder() {
             super(new Account(Name = 'Test Account'));
@@ -110,6 +126,12 @@ public class AccountTestModule {
         public AccountBuilder withName(String name) {
             super.set(Account.Name, name);
             return this;
+        }
+    }
+
+    public class AccountMocker extends TestModule.RecordMocker {
+        public AccountMocker() {
+            super(new Account(Name = 'Test Account'));
         }
     }
 }
