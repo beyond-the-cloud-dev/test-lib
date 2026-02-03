@@ -1,6 +1,6 @@
 # Examples
 
-Practical examples using Test Lib.
+Practical examples using Test Lib based on the actual codebase.
 
 ## Basic Builder Usage
 
@@ -14,8 +14,8 @@ static void testCreateAccount() {
         .withIndustry('Technology')
         .buildAndInsert();
 
-    System.assertNotEquals(null, acc.Id);
-    System.assertEquals('Acme Corporation', acc.Name);
+    Assert.isNotNull(acc.Id);
+    Assert.areEqual('Acme Corporation', acc.Name);
 }
 ```
 
@@ -24,13 +24,13 @@ static void testCreateAccount() {
 ```apex
 @IsTest
 static void testCreateMultipleAccounts() {
-    List<Account> accounts = AccountTestModule.Builder()
+    List<SObject> accounts = AccountTestModule.Builder()
         .withIndustry('Technology')
         .buildAndInsert(5);
 
-    System.assertEquals(5, accounts.size());
-    for (Account acc : accounts) {
-        System.assertEquals('Technology', acc.Industry);
+    Assert.areEqual(5, accounts.size());
+    for (SObject acc : accounts) {
+        Assert.areEqual('Technology', acc.get('Industry'));
     }
 }
 ```
@@ -44,8 +44,8 @@ static void testEnterpriseAccount() {
         .enterprise()
         .buildAndInsert();
 
-    System.assertEquals('Enterprise Account', acc.Name);
-    System.assertEquals(1000000, acc.AnnualRevenue);
+    Assert.areEqual('Enterprise Account', acc.Name);
+    Assert.areEqual(1000000, acc.AnnualRevenue);
 }
 
 @IsTest
@@ -54,8 +54,23 @@ static void testStartupAccount() {
         .startup()
         .buildAndInsert();
 
-    System.assertEquals('Startup Account', acc.Name);
-    System.assertEquals(100000, acc.AnnualRevenue);
+    Assert.areEqual('Startup Account', acc.Name);
+    Assert.areEqual(100000, acc.AnnualRevenue);
+}
+```
+
+### Template with Override
+
+```apex
+@IsTest
+static void testTemplateOverride() {
+    Account acc = (Account) AccountTestModule.Builder()
+        .enterprise()
+        .withName('Custom Enterprise')
+        .buildAndInsert();
+
+    Assert.areEqual('Custom Enterprise', acc.Name);
+    Assert.areEqual(1000000, acc.AnnualRevenue);  // From template
 }
 ```
 
@@ -66,15 +81,15 @@ static void testStartupAccount() {
 ```apex
 @IsTest
 static void testRandomIndustry() {
-    List<Account> accounts = AccountTestModule.Builder()
+    List<SObject> accounts = AccountTestModule.Builder()
         .withRandomIndustry()
-        .buildAndInsert(4);
+        .build(4);
 
     // Industries cycle through: Technology, Finance, Healthcare, Retail
-    System.assertEquals('Technology', accounts[0].Industry);
-    System.assertEquals('Finance', accounts[1].Industry);
-    System.assertEquals('Healthcare', accounts[2].Industry);
-    System.assertEquals('Retail', accounts[3].Industry);
+    Assert.areEqual('Technology', accounts[0].get('Industry'));
+    Assert.areEqual('Finance', accounts[1].get('Industry'));
+    Assert.areEqual('Healthcare', accounts[2].get('Industry'));
+    Assert.areEqual('Retail', accounts[3].get('Industry'));
 }
 ```
 
@@ -83,35 +98,49 @@ static void testRandomIndustry() {
 ```apex
 @IsTest
 static void testRecordRandomizer() {
-    List<Account> accounts = AccountTestModule.Builder()
+    List<SObject> accounts = AccountTestModule.Builder()
         .withAccountRandomizer()
-        .buildAndInsert(3);
+        .build(3);
 
-    // Each account has unique name and industry
-    System.assertEquals('Company 1', accounts[0].Name);
-    System.assertEquals('Company 2', accounts[1].Name);
-    System.assertEquals('Company 3', accounts[2].Name);
+    // Each account has unique name and cycling industry
+    Assert.areEqual('Company 1', accounts[0].get('Name'));
+    Assert.areEqual('Company 2', accounts[1].get('Name'));
+    Assert.areEqual('Company 3', accounts[2].get('Name'));
 }
 ```
 
-### Custom Randomizer
+### Using ListRandomizer
 
 ```apex
-public class EmailRandomizer implements TestModule.SingleFieldRandomizer {
-    public Object generate(Integer index) {
-        return 'user' + (index + 1) + '@example.com';
-    }
-}
-
 @IsTest
-static void testCustomRandomizer() {
-    List<Contact> contacts = ContactTestModule.Builder()
-        .withRandomizer(Contact.Email, new EmailRandomizer())
-        .buildAndInsert(3);
+static void testListRandomizer() {
+    List<SObject> accounts = AccountTestModule.Builder()
+        .withRandomizer(Account.Industry,
+            TestModule.ListRandomizer(new List<Object>{ 'Tech', 'Finance', 'Health' }))
+        .build(5);
 
-    System.assertEquals('user1@example.com', contacts[0].Email);
-    System.assertEquals('user2@example.com', contacts[1].Email);
-    System.assertEquals('user3@example.com', contacts[2].Email);
+    Assert.areEqual('Tech', accounts[0].get('Industry'));
+    Assert.areEqual('Finance', accounts[1].get('Industry'));
+    Assert.areEqual('Health', accounts[2].get('Industry'));
+    Assert.areEqual('Tech', accounts[3].get('Industry'));  // Cycles back
+    Assert.areEqual('Finance', accounts[4].get('Industry'));
+}
+```
+
+### Combining Randomizers
+
+```apex
+@IsTest
+static void testCombinedRandomizers() {
+    List<SObject> accounts = AccountTestModule.Builder()
+        .withRandomizer(new AccountRandomizer())
+        .withRandomizer(Account.Industry,
+            TestModule.ListRandomizer(new List<Object>{ 'Override' }))
+        .build(2);
+
+    // Name from AccountRandomizer, Industry overridden
+    Assert.areEqual('Company 1', accounts[0].get('Name'));
+    Assert.areEqual('Override', accounts[0].get('Industry'));
 }
 ```
 
@@ -127,8 +156,8 @@ static void testMockAccount() {
         .build();
 
     // No database operation - acc.Id is null
-    System.assertEquals(null, acc.Id);
-    System.assertEquals('Mock Account', acc.Name);
+    Assert.isNull(acc.Id);
+    Assert.areEqual('Mock Account', acc.Name);
 }
 ```
 
@@ -142,8 +171,17 @@ static void testMockWithFakeId() {
         .build();
 
     // Has a valid-looking ID without database insert
-    System.assertNotEquals(null, acc.Id);
-    System.assert(String.valueOf(acc.Id).startsWith('001'));
+    Assert.isNotNull(acc.Id);
+    Assert.isTrue(String.valueOf(acc.Id).startsWith('001'));
+}
+
+@IsTest
+static void testUniqueFakeIds() {
+    Account acc1 = (Account) AccountTestModule.Mocker().setFakeId().build();
+    Account acc2 = (Account) AccountTestModule.Mocker().setFakeId().build();
+
+    // Each call generates unique ID
+    Assert.areNotEqual(acc1.Id, acc2.Id);
 }
 ```
 
@@ -157,7 +195,20 @@ static void testMockParentRelationship() {
         .build();
 
     // Parent relationship is populated
-    System.assertEquals('Parent Corporation', acc.Parent.Name);
+    Assert.areEqual('Parent Corporation', acc.Parent.Name);
+}
+```
+
+### Deeply Nested Parent
+
+```apex
+@IsTest
+static void testDeeplyNestedParent() {
+    Contact con = (Contact) ContactTestModule.Mocker()
+        .set('Account.Parent.Name', 'Grandparent Account')
+        .build();
+
+    Assert.areEqual('Grandparent Account', con.Account.Parent.Name);
 }
 ```
 
@@ -166,16 +217,37 @@ static void testMockParentRelationship() {
 ```apex
 @IsTest
 static void testMockChildRelationship() {
-    List<Contact> contacts = ContactTestModule.Mocker()
-        .set(Contact.FirstName, 'John')
-        .build(3);
+    List<Contact> contacts = new List<Contact>{
+        (Contact) ContactTestModule.Mocker().withLastName('Smith').build(),
+        (Contact) ContactTestModule.Mocker().withLastName('Jones').build()
+    };
 
     Account acc = (Account) AccountTestModule.Mocker()
         .withContacts(contacts)
         .build();
 
     // Child relationship is populated
-    System.assertEquals(3, acc.Contacts.size());
+    Assert.areEqual(2, acc.Contacts.size());
+    Assert.areEqual('Smith', acc.Contacts[0].LastName);
+    Assert.areEqual('Jones', acc.Contacts[1].LastName);
+}
+```
+
+### Mock Read-Only Fields
+
+```apex
+@IsTest
+static void testMockReadOnlyFields() {
+    Datetime createdDate = Datetime.newInstance(2025, 1, 15, 10, 30, 0);
+
+    Account acc = (Account) AccountTestModule.Mocker()
+        .setFakeId()
+        .set('CreatedDate', createdDate)
+        .set('Owner.Name', 'System Admin')
+        .build();
+
+    Assert.areEqual(createdDate, acc.CreatedDate);
+    Assert.areEqual('System Admin', acc.Owner.Name);
 }
 ```
 
@@ -192,12 +264,12 @@ static void testAccountWithContacts() {
         .buildAndInsert();
 
     // Create related Contacts
-    List<Contact> contacts = ContactTestModule.Builder()
-        .withAccount(acc.Id)
+    List<SObject> contacts = ContactTestModule.Builder()
+        .set(Contact.AccountId, acc.Id)
         .buildAndInsert(3);
 
     // Verify
-    System.assertEquals(3, [SELECT COUNT() FROM Contact WHERE AccountId = :acc.Id]);
+    Assert.areEqual(3, [SELECT COUNT() FROM Contact WHERE AccountId = :acc.Id]);
 }
 ```
 
@@ -211,212 +283,167 @@ static void testOpportunityWithAccount() {
         .buildAndInsert();
 
     Opportunity opp = (Opportunity) OpportunityTestModule.Builder()
-        .withAccount(acc.Id)
+        .set(Opportunity.AccountId, acc.Id)
         .withAmount(50000)
         .withCloseDate(Date.today().addDays(30))
         .buildAndInsert();
 
-    System.assertEquals(acc.Id, opp.AccountId);
+    Assert.areEqual(acc.Id, opp.AccountId);
 }
 ```
 
-## Unit Testing with Mocker
+## Contact Test Module
 
-### Testing Service Logic
+### Using Contact Builder
 
 ```apex
 @IsTest
-static void testCalculateExpectedRevenue() {
-    // Create mock opportunity without database
+static void testContactBuilder() {
+    Contact con = (Contact) ContactTestModule.Builder()
+        .withFirstName('John')
+        .withLastName('Doe')
+        .withEmail('john.doe@example.com')
+        .buildAndInsert();
+
+    Assert.areEqual('John', con.FirstName);
+    Assert.areEqual('Doe', con.LastName);
+}
+```
+
+### Contact Templates
+
+```apex
+@IsTest
+static void testContactTemplates() {
+    Contact business = (Contact) ContactTestModule.Builder()
+        .business()
+        .buildAndInsert();
+
+    Contact personal = (Contact) ContactTestModule.Builder()
+        .personal()
+        .buildAndInsert();
+
+    Assert.areEqual('Business', business.FirstName);
+    Assert.areEqual('Personal', personal.FirstName);
+}
+```
+
+### Contact Mocker
+
+```apex
+@IsTest
+static void testContactMocker() {
+    Contact con = (Contact) ContactTestModule.Mocker()
+        .withFakeId()
+        .withAccountName('Parent Account')
+        .build();
+
+    Assert.isNotNull(con.Id);
+    Assert.areEqual('Parent Account', con.Account.Name);
+}
+```
+
+## Opportunity Test Module
+
+### Using Opportunity Builder
+
+```apex
+@IsTest
+static void testOpportunityBuilder() {
+    Opportunity opp = (Opportunity) OpportunityTestModule.Builder()
+        .withName('Big Deal')
+        .withStageName('Qualification')
+        .withAmount(500000)
+        .withCloseDate(Date.today().addDays(60))
+        .buildAndInsert();
+
+    Assert.areEqual('Big Deal', opp.Name);
+    Assert.areEqual(500000, opp.Amount);
+}
+```
+
+### Opportunity Templates
+
+```apex
+@IsTest
+static void testOpportunityTemplates() {
+    Opportunity prospecting = (Opportunity) OpportunityTestModule.Builder()
+        .prospecting()
+        .buildAndInsert();
+
+    Opportunity closedWon = (Opportunity) OpportunityTestModule.Builder()
+        .closedWon()
+        .buildAndInsert();
+
+    Assert.areEqual('Prospecting', prospecting.StageName);
+    Assert.areEqual('Closed Won', closedWon.StageName);
+    Assert.areEqual(100000, closedWon.Amount);
+}
+```
+
+### Opportunity Mocker
+
+```apex
+@IsTest
+static void testOpportunityMocker() {
     Opportunity opp = (Opportunity) OpportunityTestModule.Mocker()
-        .setFakeId()
-        .set(Opportunity.Amount, 100000)
-        .set(Opportunity.Probability, 80)
+        .withFakeId()
+        .withAccountName('Customer Account')
+        .withAmount(75000)
         .build();
 
-    // Test pure business logic
-    Decimal expected = RevenueCalculator.calculateExpected(opp);
-
-    System.assertEquals(80000, expected);
+    Assert.isNotNull(opp.Id);
+    Assert.areEqual('Customer Account', opp.Account.Name);
+    Assert.areEqual(75000, opp.Amount);
 }
 ```
 
-### Testing Trigger Logic
+## Builder + Mocker Integration
 
 ```apex
 @IsTest
-static void testAccountTriggerLogic() {
-    // Create mock account
-    Account oldAcc = (Account) AccountTestModule.Mocker()
-        .setFakeId()
-        .set(Account.Rating, 'Cold')
-        .build();
-
-    Account newAcc = (Account) AccountTestModule.Mocker()
-        .set(Account.Id, oldAcc.Id)
-        .set(Account.Rating, 'Hot')
-        .build();
-
-    // Test trigger logic
-    Boolean ratingChanged = AccountTriggerHandler.hasRatingChanged(oldAcc, newAcc);
-
-    System.assert(ratingChanged);
-}
-```
-
-### Testing Selector Results
-
-```apex
-@IsTest
-static void testProcessQueryResults() {
-    // Mock query results with relationships
-    List<Contact> contacts = ContactTestModule.Mocker().build(2);
-
-    Account acc = (Account) AccountTestModule.Mocker()
-        .setFakeId()
-        .withContacts(contacts)
-        .withParentName('Holding Company')
-        .build();
-
-    // Test processing logic
-    AccountDTO dto = AccountMapper.toDTO(acc);
-
-    System.assertEquals(2, dto.contactCount);
-    System.assertEquals('Holding Company', dto.parentName);
-}
-```
-
-## Template Implementation
-
-### Defining Templates
-
-```apex
-public class Templates implements TestModule.Template {
-    public SObject defaultTemplate() {
-        return new Account(
-            Name = 'Test Account',
-            Industry = 'Technology'
-        );
-    }
-
-    public Map<String, SObject> templates() {
-        return new Map<String, SObject>{
-            'enterprise' => new Account(
-                Name = 'Enterprise Account',
-                Industry = 'Technology',
-                AnnualRevenue = 1000000,
-                NumberOfEmployees = 500
-            ),
-            'startup' => new Account(
-                Name = 'Startup Account',
-                Industry = 'Technology',
-                AnnualRevenue = 100000,
-                NumberOfEmployees = 10
-            ),
-            'partner' => new Account(
-                Name = 'Partner Account',
-                Type = 'Partner',
-                Industry = 'Consulting'
-            )
-        };
-    }
-}
-```
-
-### Using Templates
-
-```apex
-@IsTest
-static void testTemplates() {
-    Account enterprise = (Account) AccountTestModule.Builder()
-        .enterprise()
+static void testBuilderThenMocker() {
+    // Create real account in database
+    Account realAccount = (Account) AccountTestModule.Builder()
+        .withName('Real Account')
         .buildAndInsert();
 
-    Account startup = (Account) AccountTestModule.Builder()
-        .startup()
-        .buildAndInsert();
+    // Create mock contact referencing real account's name
+    Contact mockContact = (Contact) ContactTestModule.Mocker()
+        .withFakeId()
+        .set('Account.Name', realAccount.Name)
+        .build();
 
-    System.assertEquals(1000000, enterprise.AnnualRevenue);
-    System.assertEquals(100000, startup.AnnualRevenue);
+    Assert.isNotNull(realAccount.Id);
+    Assert.isNotNull(mockContact.Id);
+    Assert.areEqual('Real Account', mockContact.Account.Name);
 }
 ```
 
-## Complete Test Module Example
+## Static Utilities
+
+### Using IdGenerator
 
 ```apex
 @IsTest
-public class ContactTestModule implements TestModule.BuilderProvider, TestModule.MockerProvider {
+static void testIdGenerator() {
+    Id accountId = TestModule.IdGenerator.get(Account.SObjectType);
+    Id contactId = TestModule.IdGenerator.get(Contact.SObjectType);
 
-    public static ContactBuilder Builder() {
-        return new ContactBuilder();
-    }
+    Assert.isTrue(String.valueOf(accountId).startsWith('001'));
+    Assert.isTrue(String.valueOf(contactId).startsWith('003'));
+    Assert.areNotEqual(accountId, contactId);
+}
+```
 
-    public static ContactMocker Mocker() {
-        return new ContactMocker();
-    }
+### Using fakeId()
 
-    public class ContactBuilder extends TestModule.RecordBuilder {
-        public ContactBuilder() {
-            super(new Templates());
-        }
+```apex
+@IsTest
+static void testFakeId() {
+    Id fakeId = TestModule.fakeId(Account.SObjectType);
 
-        public ContactBuilder withFirstName(String firstName) {
-            super.set(Contact.FirstName, firstName);
-            return this;
-        }
-
-        public ContactBuilder withLastName(String lastName) {
-            super.set(Contact.LastName, lastName);
-            return this;
-        }
-
-        public ContactBuilder withAccount(Id accountId) {
-            super.set(Contact.AccountId, accountId);
-            return this;
-        }
-
-        public ContactBuilder withEmail(String email) {
-            super.set(Contact.Email, email);
-            return this;
-        }
-
-        public ContactBuilder executive() {
-            super.useTemplate('executive');
-            return this;
-        }
-    }
-
-    public class ContactMocker extends TestModule.RecordMocker {
-        public ContactMocker() {
-            super(new Templates());
-        }
-
-        public ContactMocker withAccountName(String accountName) {
-            super.set('Account.Name', accountName);
-            return this;
-        }
-    }
-
-    public class Templates implements TestModule.Template {
-        public SObject defaultTemplate() {
-            return new Contact(
-                FirstName = 'John',
-                LastName = 'Doe',
-                Email = 'john.doe@example.com'
-            );
-        }
-
-        public Map<String, SObject> templates() {
-            return new Map<String, SObject>{
-                'executive' => new Contact(
-                    FirstName = 'Jane',
-                    LastName = 'Smith',
-                    Title = 'CEO',
-                    Email = 'jane.smith@example.com'
-                )
-            };
-        }
-    }
+    Assert.isTrue(String.valueOf(fakeId).startsWith('001'));
 }
 ```
 

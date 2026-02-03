@@ -1,6 +1,5 @@
 @IsTest
 private class TestModule_Test {
-
     // Builder
 
     @IsTest
@@ -22,10 +21,7 @@ private class TestModule_Test {
 
     @IsTest
     static void builderSetFieldBySObjectField() {
-        Account acc = (Account) new AccountTestModule().Builder()
-            .set(Account.Name, 'Custom Name')
-            .set(Account.AnnualRevenue, 500000)
-            .build();
+        Account acc = (Account) new AccountTestModule().Builder().set(Account.Name, 'Custom Name').set(Account.AnnualRevenue, 500000).build();
 
         Assert.areEqual('Custom Name', acc.Name);
         Assert.areEqual(500000, acc.AnnualRevenue);
@@ -33,10 +29,7 @@ private class TestModule_Test {
 
     @IsTest
     static void builderSetFieldByString() {
-        Account acc = (Account) new AccountTestModule().Builder()
-            .set('Name', 'String Field Name')
-            .set('Industry', 'Finance')
-            .build();
+        Account acc = (Account) new AccountTestModule().Builder().set('Name', 'String Field Name').set('Industry', 'Finance').build();
 
         Assert.areEqual('String Field Name', acc.Name);
         Assert.areEqual('Finance', acc.Industry);
@@ -44,10 +37,7 @@ private class TestModule_Test {
 
     @IsTest
     static void builderWithConvenienceMethods() {
-        Account acc = (Account) new AccountTestModule().Builder()
-            .withName('Convenience Name')
-            .withIndustry('Healthcare')
-            .build();
+        Account acc = (Account) new AccountTestModule().Builder().withName('Convenience Name').withIndustry('Healthcare').build();
 
         Assert.areEqual('Convenience Name', acc.Name);
         Assert.areEqual('Healthcare', acc.Industry);
@@ -55,9 +45,7 @@ private class TestModule_Test {
 
     @IsTest
     static void builderUseTemplate() {
-        Account acc = (Account) new AccountTestModule().Builder()
-            .enterprise()
-            .build();
+        Account acc = (Account) new AccountTestModule().Builder().enterprise().build();
 
         Assert.areEqual('Enterprise Account', acc.Name);
         Assert.areEqual(1000000, acc.AnnualRevenue);
@@ -65,10 +53,7 @@ private class TestModule_Test {
 
     @IsTest
     static void builderTemplateOverride() {
-        Account acc = (Account) new AccountTestModule().Builder()
-            .enterprise()
-            .withName('Custom Enterprise')
-            .build();
+        Account acc = (Account) new AccountTestModule().Builder().enterprise().withName('Custom Enterprise').build();
 
         Assert.areEqual('Custom Enterprise', acc.Name);
         Assert.areEqual(1000000, acc.AnnualRevenue);
@@ -96,9 +81,7 @@ private class TestModule_Test {
 
     @IsTest
     static void builderWithRandomizer() {
-        List<SObject> accounts = new AccountTestModule().Builder()
-            .withRandomizer(new AccountRandomizer())
-            .build(3);
+        List<SObject> accounts = new AccountTestModule().Builder().withRandomizer(new AccountRandomizer()).build(3);
 
         Assert.areEqual(3, accounts.size());
         Assert.areEqual('Company 0', accounts[0].get(Account.Name));
@@ -109,10 +92,8 @@ private class TestModule_Test {
     }
 
     @IsTest
-    static void builderWithSingleFieldRandomizer() {
-        List<SObject> accounts = new AccountTestModule().Builder()
-            .withRandomizer(Account.Name, new NameRandomizer())
-            .build(3);
+    static void builderWithFieldRandomizer() {
+        List<SObject> accounts = new AccountTestModule().Builder().withRandomizer(Account.Name, new NameRandomizer()).build(3);
 
         Assert.areEqual(3, accounts.size());
         Assert.areEqual('Name 0', accounts[0].get(Account.Name));
@@ -122,8 +103,9 @@ private class TestModule_Test {
 
     @IsTest
     static void builderWithListRandomizer() {
-        List<SObject> accounts = new AccountTestModule().Builder()
-            .withRandomizer(Account.Industry, new TestModule.ListRandomizer(new List<Object>{'Tech', 'Finance', 'Health'}))
+        List<SObject> accounts = new AccountTestModule()
+            .Builder()
+            .withRandomizer(Account.Industry, new TestModule.ListRandomizer(new List<Object>{ 'Tech', 'Finance', 'Health' }))
             .build(5);
 
         Assert.areEqual(5, accounts.size());
@@ -136,9 +118,10 @@ private class TestModule_Test {
 
     @IsTest
     static void builderCombinedRandomizers() {
-        List<SObject> accounts = new AccountTestModule().Builder()
+        List<SObject> accounts = new AccountTestModule()
+            .Builder()
             .withRandomizer(new AccountRandomizer())
-            .withRandomizer(Account.Industry, new TestModule.ListRandomizer(new List<Object>{'Override'}))
+            .withRandomizer(Account.Industry, new TestModule.ListRandomizer(new List<Object>{ 'Override' }))
             .build(2);
 
         Assert.areEqual('Company 0', accounts[0].get(Account.Name));
@@ -147,10 +130,7 @@ private class TestModule_Test {
 
     @IsTest
     static void builderRandomizerPreservesUnsetFields() {
-        List<SObject> accounts = new AccountTestModule().Builder()
-            .withIndustry('Finance')
-            .withRandomizer(new AccountRandomizer())
-            .build(2);
+        List<SObject> accounts = new AccountTestModule().Builder().withIndustry('Finance').withRandomizer(new AccountRandomizer()).build(2);
 
         Assert.areEqual('Finance', accounts[0].get(Account.Industry));
         Assert.areEqual('Finance', accounts[1].get(Account.Industry));
@@ -189,15 +169,9 @@ private class TestModule_Test {
 
     @IsTest
     static void builderThenMockerIntegration() {
-        Account realAccount = (Account) new AccountTestModule().Builder()
-            .withName('Real Account')
-            .buildAndInsert();
+        Account realAccount = (Account) new AccountTestModule().Builder().withName('Real Account').buildAndInsert();
 
-        Contact mockContact = (Contact) new ContactTestModule().Mocker()
-            .withLastName('Mock Contact')
-            .withFakeId()
-            .set('Account.Name', realAccount.Name)
-            .build();
+        Contact mockContact = (Contact) new ContactTestModule().Mocker().withLastName('Mock Contact').withFakeId().set('Account.Name', realAccount.Name).build();
 
         Assert.isNotNull(realAccount.Id);
         Assert.isNotNull(mockContact.Id);
@@ -206,14 +180,9 @@ private class TestModule_Test {
 
     @IsTest
     static void builderComplexScenario() {
-        Account enterprise = (Account) new AccountTestModule().Builder()
-            .enterprise()
-            .withName('Global Corp')
-            .buildAndInsert();
+        Account enterprise = (Account) new AccountTestModule().Builder().enterprise().withName('Global Corp').buildAndInsert();
 
-        List<Contact> contacts = (List<Contact>) new ContactTestModule().Builder()
-            .set(Contact.AccountId, enterprise.Id)
-            .buildAndInsert(2);
+        List<Contact> contacts = (List<Contact>) new ContactTestModule().Builder().set(Contact.AccountId, enterprise.Id).buildAndInsert(2);
 
         Assert.areEqual(2, contacts.size());
         for (Contact c : contacts) {
@@ -236,19 +205,14 @@ private class TestModule_Test {
 
     @IsTest
     static void mockerSetFieldBySObjectField() {
-        Account acc = (Account) new AccountTestModule().Mocker()
-            .set(Account.Name, 'Mock Account')
-            .build();
+        Account acc = (Account) new AccountTestModule().Mocker().set(Account.Name, 'Mock Account').build();
 
         Assert.areEqual('Mock Account', acc.Name);
     }
 
     @IsTest
     static void mockerSetFieldByString() {
-        Account acc = (Account) new AccountTestModule().Mocker()
-            .set('Name', 'String Mock')
-            .set('Industry', 'Healthcare')
-            .build();
+        Account acc = (Account) new AccountTestModule().Mocker().set('Name', 'String Mock').set('Industry', 'Healthcare').build();
 
         Assert.areEqual('String Mock', acc.Name);
         Assert.areEqual('Healthcare', acc.Industry);
@@ -256,10 +220,7 @@ private class TestModule_Test {
 
     @IsTest
     static void mockerWithConvenienceMethods() {
-        Account acc = (Account) new AccountTestModule().Mocker()
-            .withName('Convenience Mock')
-            .withIndustry('Finance')
-            .build();
+        Account acc = (Account) new AccountTestModule().Mocker().withName('Convenience Mock').withIndustry('Finance').build();
 
         Assert.areEqual('Convenience Mock', acc.Name);
         Assert.areEqual('Finance', acc.Industry);
@@ -267,18 +228,14 @@ private class TestModule_Test {
 
     @IsTest
     static void mockerNestedField() {
-        Account acc = (Account) new AccountTestModule().Mocker()
-            .withParentName('Parent Account')
-            .build();
+        Account acc = (Account) new AccountTestModule().Mocker().withParentName('Parent Account').build();
 
         Assert.areEqual('Parent Account', acc.Parent.Name);
     }
 
     @IsTest
     static void mockerDeeplyNestedField() {
-        Contact con = (Contact) new ContactTestModule().Mocker()
-            .set('Account.Parent.Name', 'Grandparent Account')
-            .build();
+        Contact con = (Contact) new ContactTestModule().Mocker().set('Account.Parent.Name', 'Grandparent Account').build();
 
         Assert.areEqual('Grandparent Account', con.Account.Parent.Name);
     }
@@ -290,10 +247,7 @@ private class TestModule_Test {
             (Contact) new ContactTestModule().Mocker().withLastName('Jones').build()
         };
 
-        Account acc = (Account) new AccountTestModule().Mocker()
-            .withName('Parent Account')
-            .withContacts(contacts)
-            .build();
+        Account acc = (Account) new AccountTestModule().Mocker().withName('Parent Account').withContacts(contacts).build();
 
         Assert.areEqual(2, acc.Contacts.size());
         Assert.areEqual('Smith', acc.Contacts[0].LastName);
@@ -302,17 +256,10 @@ private class TestModule_Test {
 
     @IsTest
     static void mockerMultipleChildRelationships() {
-        List<Contact> contacts = new List<Contact>{
-            (Contact) new ContactTestModule().Mocker().withLastName('Smith').build()
-        };
-        List<Opportunity> opportunities = new List<Opportunity>{
-            new Opportunity(Name = 'Big Deal', StageName = 'Prospecting', CloseDate = Date.today())
-        };
+        List<Contact> contacts = new List<Contact>{ (Contact) new ContactTestModule().Mocker().withLastName('Smith').build() };
+        List<Opportunity> opportunities = new List<Opportunity>{ new Opportunity(Name = 'Big Deal', StageName = 'Prospecting', CloseDate = Date.today()) };
 
-        Account acc = (Account) new AccountTestModule().Mocker()
-            .withContacts(contacts)
-            .withOpportunities(opportunities)
-            .build();
+        Account acc = (Account) new AccountTestModule().Mocker().withContacts(contacts).withOpportunities(opportunities).build();
 
         Assert.areEqual(1, acc.Contacts.size());
         Assert.areEqual(1, acc.Opportunities.size());
@@ -330,9 +277,7 @@ private class TestModule_Test {
 
     @IsTest
     static void mockerSetFakeId() {
-        Account acc = (Account) new AccountTestModule().Mocker()
-            .withFakeId()
-            .build();
+        Account acc = (Account) new AccountTestModule().Mocker().withFakeId().build();
 
         Assert.isNotNull(acc.Id);
         Assert.isTrue(String.valueOf(acc.Id).startsWith('001'));
@@ -350,28 +295,21 @@ private class TestModule_Test {
     static void mockerSetReadOnly() {
         Datetime createdDate = Datetime.newInstance(2025, 1, 15, 10, 30, 0);
 
-        Account acc = (Account) new AccountTestModule().Mocker()
-            .withFakeId()
-            .withCreatedDate(createdDate)
-            .build();
+        Account acc = (Account) new AccountTestModule().Mocker().withFakeId().withCreatedDate(createdDate).build();
 
         Assert.areEqual(createdDate, acc.CreatedDate);
     }
 
     @IsTest
     static void mockerSetReadOnlyNestedField() {
-        Account acc = (Account) new AccountTestModule().Mocker()
-            .set('Owner.Name', 'System Admin')
-            .build();
+        Account acc = (Account) new AccountTestModule().Mocker().set('Owner.Name', 'System Admin').build();
 
         Assert.areEqual('System Admin', acc.Owner.Name);
     }
 
     @IsTest
     static void mockerWithBulkRandomizer() {
-        List<SObject> accounts = new AccountTestModule().Mocker()
-            .withRandomizer(new AccountRandomizer())
-            .build(3);
+        List<SObject> accounts = new AccountTestModule().Mocker().withRandomizer(new AccountRandomizer()).build(3);
 
         Assert.areEqual(3, accounts.size());
         Assert.areEqual('Company 0', accounts[0].get('Name'));
@@ -380,10 +318,8 @@ private class TestModule_Test {
     }
 
     @IsTest
-    static void mockerWithSingleFieldRandomizer() {
-        List<SObject> accounts = new AccountTestModule().Mocker()
-            .withRandomizer(Account.Name, new NameRandomizer())
-            .build(3);
+    static void mockerWithFieldRandomizer() {
+        List<SObject> accounts = new AccountTestModule().Mocker().withRandomizer(Account.Name, new NameRandomizer()).build(3);
 
         Assert.areEqual(3, accounts.size());
         Assert.areEqual('Name 0', accounts[0].get('Name'));
@@ -393,9 +329,7 @@ private class TestModule_Test {
 
     @IsTest
     static void mockerWithListRandomizer() {
-        List<SObject> accounts = new AccountTestModule().Mocker()
-            .withRandomizer(Account.Industry, new TestModule.ListRandomizer(new List<Object>{'A', 'B'}))
-            .build(4);
+        List<SObject> accounts = new AccountTestModule().Mocker().withRandomizer(Account.Industry, new TestModule.ListRandomizer(new List<Object>{ 'A', 'B' })).build(4);
 
         Assert.areEqual('A', accounts[0].get('Industry'));
         Assert.areEqual('B', accounts[1].get('Industry'));
@@ -405,8 +339,8 @@ private class TestModule_Test {
 
     @IsTest
     static void fakeIdStaticUtility() {
-        Id accountId = TestModule.fakeId(Account.SObjectType);
-        Id contactId = TestModule.fakeId(Contact.SObjectType);
+        Id accountId = TestModule.IdGenerator.get(Account.SObjectType);
+        Id contactId = TestModule.IdGenerator.get(Contact.SObjectType);
 
         Assert.isTrue(String.valueOf(accountId).startsWith('001'));
         Assert.isTrue(String.valueOf(contactId).startsWith('003'));
@@ -447,7 +381,6 @@ private class TestModule_Test {
             super.useTemplate('startup');
             return this;
         }
-
     }
 
     public class AccountMocker extends TestModule.RecordMocker {
@@ -489,7 +422,6 @@ private class TestModule_Test {
             super.set('CreatedDate', createdDate);
             return this;
         }
-
     }
 
     public class Templates implements TestModule.Template {
@@ -537,26 +469,25 @@ private class TestModule_Test {
         }
     }
 
-    public class AccountRandomizer extends TestModule.RecordRandomizer {
-        public AccountRandomizer() {
-            this.add(Account.Name, new CompanyNameRandomizer());
-            this.add(Account.AnnualRevenue, new RevenueRandomizer());
+    public class AccountRandomizer implements TestModule.RecordRandomizer {
+        public Map<SObjectField, TestModule.FieldRandomizer> randomizers() {
+            return new Map<SObjectField, TestModule.FieldRandomizer>{ Account.Name => new CompanyNameRandomizer(), Account.AnnualRevenue => new RevenueRandomizer() };
         }
     }
 
-    public class CompanyNameRandomizer implements TestModule.SingleFieldRandomizer {
+    public class CompanyNameRandomizer implements TestModule.FieldRandomizer {
         public Object generate(Integer index) {
             return 'Company ' + index;
         }
     }
 
-    public class RevenueRandomizer implements TestModule.SingleFieldRandomizer {
+    public class RevenueRandomizer implements TestModule.FieldRandomizer {
         public Object generate(Integer index) {
             return (index + 1) * 100000;
         }
     }
 
-    public class NameRandomizer implements TestModule.SingleFieldRandomizer {
+    public class NameRandomizer implements TestModule.FieldRandomizer {
         public Object generate(Integer index) {
             return 'Name ' + index;
         }

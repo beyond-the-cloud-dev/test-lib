@@ -83,7 +83,16 @@ public class AccountTestModule implements TestModule.BuilderProvider, TestModule
         }
     }
 
-    public class IndustryRandomizer implements TestModule.SingleFieldRandomizer {
+    public class AccountRandomizer implements TestModule.RecordRandomizer {
+        public Map<SObjectField, TestModule.FieldRandomizer> randomizers() {
+            return new Map<SObjectField, TestModule.FieldRandomizer>{
+                Account.Name => new CompanyNameRandomizer(),
+                Account.Industry => new IndustryRandomizer()
+            };
+        }
+    }
+
+    public class IndustryRandomizer implements TestModule.FieldRandomizer {
         private List<String> industries = new List<String>{ 'Technology', 'Finance', 'Healthcare', 'Retail' };
 
         public Object generate(Integer index) {
@@ -91,16 +100,9 @@ public class AccountTestModule implements TestModule.BuilderProvider, TestModule
         }
     }
 
-    public class CompanyNameRandomizer implements TestModule.SingleFieldRandomizer {
+    public class CompanyNameRandomizer implements TestModule.FieldRandomizer {
         public Object generate(Integer index) {
             return 'Company ' + (index + 1);
-        }
-    }
-
-    public class AccountRandomizer extends TestModule.RecordRandomizer {
-        public AccountRandomizer() {
-            this.add(Account.Name, new CompanyNameRandomizer());
-            this.add(Account.Industry, new IndustryRandomizer());
         }
     }
 }
