@@ -42,7 +42,6 @@ export default defineConfig({
         collapsed: false,
         items: [
           { text: "Build", link: "/builder/build" },
-          { text: "Set Fields", link: "/builder/set" },
           { text: "Templates", link: "/builder/templates" },
           { text: "Randomizers", link: "/builder/randomizers" },
         ],
@@ -52,9 +51,6 @@ export default defineConfig({
         collapsed: true,
         items: [
           { text: "Build", link: "/mocker/build" },
-          { text: "Set Fields", link: "/mocker/set" },
-          { text: "Relationships", link: "/mocker/relationships" },
-          { text: "Fake ID", link: "/mocker/fake-id" },
           { text: "Randomizers", link: "/mocker/randomizers" },
         ],
       },
