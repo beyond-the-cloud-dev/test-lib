@@ -159,12 +159,6 @@ Visit the [documentation](https://testlib.beyondthecloud.dev/) to view the full 
 
 Read about the features in the [basic features](https://testlib.beyondthecloud.dev/getting-started.html).
 
-## Contributors
-
-<a href="https://github.com/beyond-the-cloud-dev/soql-lib/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=beyond-the-cloud-dev/test-lib" />
-</a>
-
 ## License notes
 
 - For proper license management each repository should contain LICENSE file similar to this one.
