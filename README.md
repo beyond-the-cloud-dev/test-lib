@@ -5,7 +5,7 @@
       <img alt="Test Lib logo" src="./website/public/logo.png" height="98">
     </picture>
   </a>
-  <h1>Test Lib</h1>
+  <h1>Test Lib (BETA)</h1>
 
 <a href="https://beyondthecloud.dev"><img alt="Beyond The Cloud logo" src="https://img.shields.io/badge/MADE_BY_BEYOND_THE_CLOUD-555?style=for-the-badge"></a>
 <a><img alt="API version" src="https://img.shields.io/badge/api-v65.0-blue?style=for-the-badge"></a>
@@ -15,252 +15,157 @@
 
 </div>
 
-# Test Lib (BETA)
+# Getting Started
 
-Apex test data builder library with **Builder** and **Mocker** patterns for creating test records in Salesforce.
+The Test Lib allows for easy test data creation in Apex.
 
-For comprehensive documentation, visit [https://beyond-the-cloud-dev.github.io/test-lib/](https://beyond-the-cloud-dev.github.io/test-lib/)
+Test Lib is part of [Apex Fluently](https://apexfluently.beyondthecloud.dev/), a suite of production-ready Salesforce libraries by [Beyond the Cloud](https://blog.beyondthecloud.dev/blog).
 
-## Features
+**Test Module**
 
-- **Builder Pattern** - Fluent API for creating real database records
-- **Mocker Pattern** - Create in-memory records without DML operations
-- **Templates** - Reusable record configurations for common scenarios
-- **Randomizers** - Generate unique field values for bulk data creation
-- **Parent Relations** - Mock parent lookups (e.g., `Account.Parent.Name`)
-- **Child Relations** - Mock child collections (e.g., `Account.Contacts`)
-- **Fake IDs** - Generate valid-looking IDs via `TestModule.IdGenerator`
-
-## Quick Start
-
-### Builder - Create Real Records
-
-```apex
+```java
 @IsTest
-static void testWithRealRecords() {
-    // Create single record
-    Account acc = (Account) AccountTestModule.Builder()
-        .withName('Acme Corp')
-        .enterprise()
-        .buildAndInsert();
-
-    // Create multiple records with unique values
-    List<Account> accounts = AccountTestModule.Builder()
-        .withAccountRandomizer()
-        .buildAndInsert(100);
-
-    Assert.isNotNull(acc.Id);
-    Assert.areEqual(100, accounts.size());
-}
-```
-
-### Mocker - Create In-Memory Records
-
-```apex
-@IsTest
-static void testWithMockedRecords() {
-    // Create mock with fake ID
-    Account acc = (Account) AccountTestModule.Mocker()
-        .setFakeId()
-        .build();
-
-    // Mock with parent relationship
-    Account accWithParent = (Account) AccountTestModule.Mocker()
-        .withParentName('Parent Corp')
-        .build();
-
-    // Mock with child records
-    List<Contact> contacts = (List<Contact>) ContactTestModule.Mocker().build(3);
-    Account accWithContacts = (Account) AccountTestModule.Mocker()
-        .withContacts(contacts)
-        .build();
-
-    Assert.areEqual('Parent Corp', accWithParent.Parent.Name);
-    Assert.areEqual(3, accWithContacts.Contacts.size());
-}
-```
-
-## Installation
-
-### Using Salesforce CLI
-
-```bash
-# Clone the repository
-git clone https://github.com/beyond-the-cloud-dev/test-lib.git
-cd test-lib
-
-# Deploy to your org
-sf project deploy start --target-org your-org-alias
-```
-
-### Deploy to Salesforce
-
-<a href="https://githubsfdeploy.herokuapp.com?owner=beyond-the-cloud-dev&repo=test-lib&ref=main">
-  <img alt="Deploy to Salesforce"
-       src="https://raw.githubusercontent.com/afawcett/githubsfdeploy/master/deploy.png">
-</a>
-
-## Documentation
-
-Full documentation: [https://beyond-the-cloud-dev.github.io/test-lib/](https://beyond-the-cloud-dev.github.io/test-lib/)
-
-### Documentation Sections
-
-- **[Getting Started](https://beyond-the-cloud-dev.github.io/test-lib/getting-started)** - Introduction and setup
-- **[Builder Pattern](https://beyond-the-cloud-dev.github.io/test-lib/builder)** - Creating real database records
-- **[Mocker Pattern](https://beyond-the-cloud-dev.github.io/test-lib/mocker)** - Creating in-memory mocks
-- **[Templates](https://beyond-the-cloud-dev.github.io/test-lib/templates)** - Reusable record configurations
-- **[Randomizers](https://beyond-the-cloud-dev.github.io/test-lib/randomizers)** - Generating unique values
-- **[API Reference](https://beyond-the-cloud-dev.github.io/test-lib/api)** - Complete API documentation
-- **[Examples](https://beyond-the-cloud-dev.github.io/test-lib/examples)** - Practical code examples
-
-### Run Documentation Locally
-
-```bash
-npm install
-npm run docs:dev
-```
-
-## Project Structure
-
-```
-force-app/main/default/classes/
-├── TestModule.cls                    # Core framework
-├── TestModule.cls-meta.xml
-├── TestModule_Test.cls               # Framework tests
-├── TestModule_Test.cls-meta.xml
-└── concrete-modules/                 # Example implementations
-    ├── AccountTestModule.cls
-    ├── ContactTestModule.cls
-    └── OpportunityTestModule.cls
-```
-
-## Creating a Test Module
-
-```apex
-@IsTest
-public class AccountTestModule {
-
-    public static AccountBuilder Builder() {
-        return new AccountBuilder();
+public class ContactTestModule implements TestModule.BuilderProvider, TestModule.MockerProvider {
+    public static ContactBuilder Builder() {
+        return new ContactBuilder();
     }
 
-    public static AccountMocker Mocker() {
-        return new AccountMocker();
+    public static ContactMocker Mocker() {
+        return new ContactMocker();
     }
 
-    public class AccountBuilder extends TestModule.RecordBuilder {
-        public AccountBuilder() {
+    public class ContactBuilder extends TestModule.RecordBuilder {
+        public ContactBuilder() {
             super(new Templates());
         }
 
-        public AccountBuilder withName(String name) {
-            super.set(Account.Name, name);
+        public ContactBuilder withFirstName(String firstName) {
+            super.set(Contact.FirstName, firstName);
             return this;
         }
 
-        public AccountBuilder enterprise() {
-            super.useTemplate('enterprise');
+        public ContactBuilder withLastName(String lastName) {
+            super.set(Contact.LastName, lastName);
+            return this;
+        }
+
+        public ContactBuilder withEmail(String email) {
+            super.set(Contact.Email, email);
+            return this;
+        }
+
+        public ContactBuilder business() {
+            super.useTemplate('business');
+            return this;
+        }
+
+        public ContactBuilder personal() {
+            super.useTemplate('personal');
+            return this;
+        }
+
+        public ContactBuilder withContactRandomizer() {
+            super.withRandomizer(new ContactRandomizer());
             return this;
         }
     }
 
-    public class AccountMocker extends TestModule.RecordMocker {
-        public AccountMocker() {
-            super(new Account(Name = 'Test Account', Industry = 'Technology'));
+    public class ContactMocker extends TestModule.RecordMocker {
+        public ContactMocker() {
+            super(new Contact(FirstName = 'Test', LastName = 'Contact', Email = 'test.contact@example.com'));
         }
 
-        public AccountMocker withContacts(List<Contact> contacts) {
-            super.setChildren('Contacts', contacts);
+        public ContactMocker withFirstName(String firstName) {
+            super.set(Contact.FirstName, firstName);
             return this;
         }
 
-        public AccountMocker withParentName(String parentName) {
-            super.set('Parent.Name', parentName);
+        public ContactMocker withLastName(String lastName) {
+            super.set(Contact.LastName, lastName);
+            return this;
+        }
+
+        public ContactMocker withEmail(String email) {
+            super.set(Contact.Email, email);
+            return this;
+        }
+
+        public ContactMocker withAccountName(String accountName) {
+            super.set('Account.Name', accountName);
+            return this;
+        }
+
+        public ContactMocker withFakeId() {
+            super.setFakeId();
+            return this;
+        }
+
+        public ContactMocker withContactRandomizer() {
+            super.withRandomizer(new ContactRandomizer());
             return this;
         }
     }
 
     public class Templates implements TestModule.Template {
         public SObject defaultTemplate() {
-            return new Account(Name = 'Test Account', Industry = 'Technology');
+            return new Contact(FirstName = 'Test', LastName = 'Contact', Email = 'test.contact@example.com');
         }
 
         public Map<String, SObject> templates() {
             return new Map<String, SObject>{
-                'enterprise' => new Account(Name = 'Enterprise Account', AnnualRevenue = 1000000),
-                'startup' => new Account(Name = 'Startup Account', AnnualRevenue = 100000)
+                'business' => new Contact(FirstName = 'Business', LastName = 'Contact', Email = 'business.contact@example.com'),
+                'personal' => new Contact(FirstName = 'Personal', LastName = 'Contact', Email = 'personal.contact@example.com')
             };
+        }
+    }
+
+    public class ContactRandomizer implements TestModule.RecordRandomizer {
+        public Map<SObjectField, TestModule.FieldRandomizer> randomizers() {
+            return new Map<SObjectField, TestModule.FieldRandomizer>{
+                Contact.FirstName => new FirstNameRandomizer(),
+                Contact.LastName => new LastNameRandomizer()
+            };
+        }
+    }
+
+    public class FirstNameRandomizer implements TestModule.FieldRandomizer {
+        private List<String> firstNames = new List<String>{ 'John', 'Jane', 'Bob', 'Alice' };
+
+        public Object generate(Integer index) {
+            return firstNames[Math.mod(index, firstNames.size())];
+        }
+    }
+
+    public class LastNameRandomizer implements TestModule.FieldRandomizer {
+        public Object generate(Integer index) {
+            return 'Contact ' + (index + 1);
         }
     }
 }
 ```
 
-## Core Interfaces
+## Deploy to Salesforce
 
-```apex
-// Builder - creates real records for database insertion
-public interface Builder {
-    Builder set(SObjectField field, Object value);
-    Builder set(String field, Object value);
-    Builder useTemplate(String templateName);
-    Builder withRandomizer(TestModule.RecordRandomizer randomizer);
-    Builder withRandomizer(SObjectField field, TestModule.FieldRandomizer randomizer);
-    SObject build();
-    SObject buildAndInsert();
-    List<SObject> build(Integer amount);
-    List<SObject> buildAndInsert(Integer amount);
-}
+<a href="https://githubsfdeploy.herokuapp.com?owner=beyond-the-cloud-dev&repo=test-lib&ref=main">
+  <img alt="Deploy to Salesforce"
+       src="https://raw.githubusercontent.com/afawcett/githubsfdeploy/master/deploy.png">
+</a>
 
-// Mocker - creates in-memory records without DML
-public interface Mocker {
-    Mocker set(SObjectField field, Object value);
-    Mocker set(String field, Object value);  // Supports dot notation for parent relationships
-    Mocker setChildren(String relationship, List<SObject> children);
-    Mocker setFakeId();
-    Mocker withRandomizer(TestModule.RecordRandomizer randomizer);
-    Mocker withRandomizer(SObjectField field, TestModule.FieldRandomizer randomizer);
-    SObject build();
-    List<SObject> build(Integer amount);
-}
+# Documentation 
 
-// FieldRandomizer - generates values for a single field
-public interface FieldRandomizer {
-    Object generate(Integer index);
-}
+Visit the [documentation](https://testlib.beyondthecloud.dev/) to view the full documentation.
 
-// RecordRandomizer - generates values for multiple fields
-public interface RecordRandomizer {
-    Map<SObjectField, TestModule.FieldRandomizer> randomizers();
-}
-```
+## Features
+
+Read about the features in the [basic features](https://testlib.beyondthecloud.dev/getting-started.html).
 
 ## Contributors
 
-<a href="https://github.com/beyond-the-cloud-dev/test-lib/graphs/contributors">
+<a href="https://github.com/beyond-the-cloud-dev/soql-lib/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=beyond-the-cloud-dev/test-lib" />
 </a>
 
-## License
+## License notes
 
-MIT License
-
-Copyright © 2025 Beyond The Cloud Sp. z o.o. (BeyondTheCloud.Dev)
-
-See [LICENSE](LICENSE) file for details.
-
-## About Beyond The Cloud
-
-This library is maintained by [Beyond The Cloud](https://beyondthecloud.dev) - experts in Salesforce development.
-
-**Connect with us:**
-
-- Website: [beyondthecloud.dev](https://beyondthecloud.dev)
-- LinkedIn: [Beyond The Cloud](https://www.linkedin.com/company/beyondtheclouddev)
-- GitHub: [@beyond-the-cloud-dev](https://github.com/beyond-the-cloud-dev)
-
-## Support
-
-- **Documentation**: [Full documentation](https://beyond-the-cloud-dev.github.io/test-lib/)
-- **Issues**: [GitHub Issues](https://github.com/beyond-the-cloud-dev/test-lib/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/beyond-the-cloud-dev/test-lib/discussions)
+- For proper license management each repository should contain LICENSE file similar to this one.
+- Each original class should contain copyright mark: Copyright (c) 2026 Beyond The Cloud Sp. z o.o. (BeyondTheCloud.Dev)
