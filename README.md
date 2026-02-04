@@ -13,7 +13,7 @@
 <a href="https://github.com/beyond-the-cloud-dev/test-lib/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/badge/license-mit-green?style=for-the-badge"></a>
 <img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/beyond-the-cloud-dev/test-lib?style=for-the-badge&logo=github&color=blue">
 <img alt="GitHub Release" src="https://img.shields.io/github/v/release/beyond-the-cloud-dev/test-lib?display_name=tag&style=for-the-badge&color=blue">
-<img alt="Codecov" src="https://img.shields.io/codecov/c/github/beyond-the-cloud-dev/test-lib?style=for-the-badge">
+<!-- <img alt="Codecov" src="https://img.shields.io/codecov/c/github/beyond-the-cloud-dev/test-lib?style=for-the-badge"> -->
 </div>
 
 # Getting Started
