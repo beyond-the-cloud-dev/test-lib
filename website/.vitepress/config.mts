@@ -26,34 +26,42 @@ export default defineConfig({
 
     nav: [
       { text: "Home", link: "/" },
-      { text: "Guide", link: "/getting-started" },
-      { text: "API", link: "/api" },
+      { text: "Documentation", link: "/introduction" },
     ],
 
     sidebar: [
       {
-        text: "Introduction",
+        text: "Docs",
         items: [
-          { text: "Getting Started", link: "/getting-started" },
+          { text: "Introduction", link: "/introduction" },
           { text: "Installation", link: "/installation" },
         ],
       },
       {
-        text: "Core Concepts",
+        text: "Builder",
+        collapsed: false,
         items: [
-          { text: "Builder Pattern", link: "/builder" },
-          { text: "Mocker Pattern", link: "/mocker" },
-          { text: "Templates", link: "/templates" },
-          { text: "Randomizers", link: "/randomizers" },
+          { text: "Build", link: "/builder/build" },
+          { text: "Set Fields", link: "/builder/set" },
+          { text: "Templates", link: "/builder/templates" },
+          { text: "Randomizers", link: "/builder/randomizers" },
         ],
       },
       {
-        text: "Usage",
+        text: "Mocker",
+        collapsed: true,
         items: [
-          { text: "API Reference", link: "/api" },
-          { text: "Examples", link: "/examples" },
-          { text: "Best Practices", link: "/best-practices" },
+          { text: "Build", link: "/mocker/build" },
+          { text: "Set Fields", link: "/mocker/set" },
+          { text: "Relationships", link: "/mocker/relationships" },
+          { text: "Fake ID", link: "/mocker/fake-id" },
+          { text: "Randomizers", link: "/mocker/randomizers" },
         ],
+      },
+      {
+        text: "Utilities",
+        collapsed: true,
+        items: [{ text: "IdGenerator", link: "/utilities/id-generator" }],
       },
     ],
 
