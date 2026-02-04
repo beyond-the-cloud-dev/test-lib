@@ -1,6 +1,6 @@
-# Contributing to Salesforce Template
+# Contributing to Salesforce Test Lib
 
-Thank you for considering contributing to the **Salesforce Template** project! 🙌
+Thank you for considering contributing to the **Salesforce Test Lib** project! 🙌
 We welcome contributions that improve performance, add features, fix bugs, or enhance documentation and tests.
 
 ## 🚀 How to Contribute
@@ -9,13 +9,13 @@ To contribute to this project, please follow the standard GitHub fork-and-pull w
 
 ### 1. Fork the Repository
 
-Start by [forking the repository](https://github.com/beyond-the-cloud-dev/template/fork) to your own GitHub account.
+Start by [forking the repository](https://github.com/beyond-the-cloud-dev/test-lib/fork) to your own GitHub account.
 
 ### 2. Clone Your Fork
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/template.git
-cd template
+git clone https://github.com/YOUR_USERNAME/test-lib.git
+cd test-lib
 ```
 
 ### 3. Create a New Branch
@@ -66,7 +66,7 @@ Use conventional commit messages:
 Open a Pull Request (PR) from your fork to the main branch of the original repository:
 
 ```
-https://github.com/beyond-the-cloud-dev/template
+https://github.com/beyond-the-cloud-dev/test-lib
 ```
 
 - Base: `main`
@@ -120,7 +120,7 @@ We welcome the following types of contributions:
 
 - Use GitHub Issues to suggest features
 - Describe the use case
-- Explain why it would benefit the template
+- Explain why it would benefit the test-lib
 
 ## 🛠 Development Setup
 
@@ -138,17 +138,17 @@ sf project deploy start -o dev
 
 ## 📚 Resources
 
-- [Full Documentation](https://beyond-the-cloud-dev.github.io/template/)
-- [Development Guide](https://beyond-the-cloud-dev.github.io/template/guide/development)
-- [Testing Guide](https://beyond-the-cloud-dev.github.io/template/guide/testing)
-- [Best Practices](https://beyond-the-cloud-dev.github.io/template/examples/best-practices)
+- [Full Documentation](https://beyond-the-cloud-dev.github.io/test-lib/)
+- [Development Guide](https://beyond-the-cloud-dev.github.io/test-lib/guide/development)
+- [Testing Guide](https://beyond-the-cloud-dev.github.io/test-lib/guide/testing)
+- [Best Practices](https://beyond-the-cloud-dev.github.io/test-lib/examples/best-practices)
 
 ## 💬 Questions?
 
 If you have questions about contributing:
 
-- Open a [GitHub Discussion](https://github.com/beyond-the-cloud-dev/template/discussions)
-- Check existing [Issues](https://github.com/beyond-the-cloud-dev/template/issues)
-- Review the [documentation](https://beyond-the-cloud-dev.github.io/template/)
+- Open a [GitHub Discussion](https://github.com/beyond-the-cloud-dev/test-lib/discussions)
+- Check existing [Issues](https://github.com/beyond-the-cloud-dev/test-lib/issues)
+- Review the [documentation](https://beyond-the-cloud-dev.github.io/test-lib/)
 
-Thank you for helping make this template better! 🚀
+Thank you for helping make this test-lib better! 🚀
