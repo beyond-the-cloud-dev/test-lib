@@ -1,6 +1,8 @@
 /**
  * Copyright (c) 2026 Beyond The Cloud Sp. z o.o. (BeyondTheCloud.Dev)
  * Licensed under the MIT License (https://github.com/beyond-the-cloud-dev/test-lib/blob/main/LICENSE)
+ * 
+ * v0.1.0
 **/
 @IsTest
 @TestVisible
@@ -17,6 +19,7 @@ private class TestModule {
         Builder set(SObjectField field, Object value);
         Builder set(String field, Object value);
         Builder useTemplate(String templateName);
+        Builder withRecordType(String recordTypeDeveloperName);
         Builder withRandomizer(TestModule.RecordRandomizer randomizer);
         Builder withRandomizer(SObjectField field, TestModule.FieldRandomizer randomizer);
 
@@ -31,6 +34,7 @@ private class TestModule {
         Mocker set(String field, Object value); // parent relationships, formulas, rollup sums, etc.
         Mocker setChildren(String relationship, List<SObject> children);
         Mocker setFakeId();
+        Mocker withRecordType(String recordTypeDeveloperName);
         Mocker withRandomizer(TestModule.RecordRandomizer randomizer);
         Mocker withRandomizer(SObjectField field, TestModule.FieldRandomizer randomizer);
 
@@ -54,6 +58,7 @@ private class TestModule {
     // Default utilities
 
     public static final RandomIdGenerator IdGenerator = new RandomIdGenerator();
+    public static final RecordTypesInfo RecordTypesInfo = new RecordTypesInfo();
 
     public static Id fakeId(SObjectType objectType) {
         return IdGenerator.get(objectType);
@@ -102,6 +107,11 @@ private class TestModule {
                 this.prototype.put(field, template.get(field));
             }
 
+            return this;
+        }
+
+        public virtual RecordBuilder withRecordType(String recordTypeDeveloperName) {
+            this.prototype.put('RecordTypeId', TestModule.RecordTypesInfo.getId(this.prototype.getSObjectType(), recordTypeDeveloperName));
             return this;
         }
 
@@ -180,6 +190,11 @@ private class TestModule {
 
         public virtual RecordMocker setFakeId() {
             this.fields.put('Id', TestModule.IdGenerator.get(this.prototypeType));
+            return this;
+        }
+
+        public virtual RecordMocker withRecordType(String recordTypeDeveloperName) {
+            this.fields.put('RecordTypeId', TestModule.RecordTypesInfo.getId(this.prototypeType, recordTypeDeveloperName));
             return this;
         }
 
@@ -331,6 +346,31 @@ private class TestModule {
             }
 
             return prefix;
+        }
+    }
+
+    @TestVisible
+    public  class RecordTypesInfo {
+        private final Map<SObjectType, Map<String, Schema.RecordTypeInfo>> OBJECT_TYPE_TO_RECORD_TYPE_BY_DEVELOPER_NAME = new Map<SObjectType, Map<String, Schema.RecordTypeInfo>>();
+    
+        public Id getId(SObjectType objectType, String recordTypeDeveloperName) {
+            return byDeveloperName(objectType, recordTypeDeveloperName)?.getRecordTypeId();
+        }
+    
+        private Schema.RecordTypeInfo byDeveloperName(SObjectType objectType, String recordTypeDeveloperName) {
+            if (
+                !this.OBJECT_TYPE_TO_RECORD_TYPE_BY_DEVELOPER_NAME.containsKey(objectType) ||
+                !this.OBJECT_TYPE_TO_RECORD_TYPE_BY_DEVELOPER_NAME.get(objectType).containsKey(recordTypeDeveloperName)
+            ) {
+                load(objectType);
+            }
+    
+            return this.OBJECT_TYPE_TO_RECORD_TYPE_BY_DEVELOPER_NAME.get(objectType).get(recordTypeDeveloperName);
+        }
+    
+        private void load(SObjectType objectType) {
+            Schema.DescribeSObjectResult describe = objectType.getDescribe(SObjectDescribeOptions.DEFERRED);
+            this.OBJECT_TYPE_TO_RECORD_TYPE_BY_DEVELOPER_NAME.put(objectType, describe.getRecordTypeInfosByDeveloperName());
         }
     }
 
