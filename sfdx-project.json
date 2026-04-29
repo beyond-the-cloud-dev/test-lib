@@ -7,6 +7,10 @@
       "default": true,
       "package": "Test Lib",
       "versionDescription": "Apex test data builder library with Builder and Mocker patterns for creating test records"
+    },
+    {
+      "path": "examples",
+      "default": false
     }
   ],
   "name": "BeyondTheCloud",
