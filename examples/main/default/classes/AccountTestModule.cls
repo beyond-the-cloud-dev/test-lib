@@ -9,7 +9,7 @@ public class AccountTestModule implements TestModule.BuilderProvider, TestModule
     }
 
     public class Builder extends TestModule.RecordBuilder {
-        public Builder() {
+        private Builder() {
             super(new Templates());
         }
 
@@ -44,8 +44,8 @@ public class AccountTestModule implements TestModule.BuilderProvider, TestModule
         }
     }
 
-    public class Mocker extends TestModule.RecordMocker {
-        public Mocker() {
+    private class Mocker extends TestModule.RecordMocker {
+        private Mocker() {
             super(new Account(Name = 'Test Account', Industry = 'Technology'));
         }
 

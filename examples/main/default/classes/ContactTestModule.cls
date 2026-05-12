@@ -9,7 +9,7 @@ public class ContactTestModule implements TestModule.BuilderProvider, TestModule
     }
 
     public class Builder extends TestModule.RecordBuilder {
-        public Builder() {
+        private Builder() {
             super(new Templates());
         }
 
@@ -44,8 +44,8 @@ public class ContactTestModule implements TestModule.BuilderProvider, TestModule
         }
     }
 
-    public class Mocker extends TestModule.RecordMocker {
-        public Mocker() {
+    private class Mocker extends TestModule.RecordMocker {
+        private Mocker() {
             super(new Contact(FirstName = 'Test', LastName = 'Contact', Email = 'test.contact@example.com'));
         }
 

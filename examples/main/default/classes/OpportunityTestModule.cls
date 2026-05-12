@@ -9,7 +9,7 @@ public class OpportunityTestModule implements TestModule.BuilderProvider, TestMo
     }
 
     public class Builder extends TestModule.RecordBuilder {
-        public Builder() {
+        private Builder() {
             super(new Templates());
         }
 
@@ -49,8 +49,8 @@ public class OpportunityTestModule implements TestModule.BuilderProvider, TestMo
         }
     }
 
-    public class Mocker extends TestModule.RecordMocker {
-        public Mocker() {
+    private class Mocker extends TestModule.RecordMocker {
+        private Mocker() {
             super(new Opportunity(Name = 'Test Opportunity', StageName = 'Prospecting', CloseDate = Date.today().addDays(30)));
         }
 
