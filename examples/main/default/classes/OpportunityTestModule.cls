@@ -1,90 +1,90 @@
 @IsTest
 public class OpportunityTestModule implements TestModule.BuilderProvider, TestModule.MockerProvider {
-    public static OpportunityBuilder Builder() {
-        return new OpportunityBuilder();
+    public static Builder Builder() {
+        return new Builder();
     }
 
-    public static OpportunityMocker Mocker() {
-        return new OpportunityMocker();
+    public static Mocker Mocker() {
+        return new Mocker();
     }
 
-    public class OpportunityBuilder extends TestModule.RecordBuilder {
-        public OpportunityBuilder() {
+    public class Builder extends TestModule.RecordBuilder {
+        public Builder() {
             super(new Templates());
         }
 
-        public OpportunityBuilder withName(String name) {
+        public Builder withName(String name) {
             super.set(Opportunity.Name, name);
             return this;
         }
 
-        public OpportunityBuilder withStageName(String stageName) {
+        public Builder withStageName(String stageName) {
             super.set(Opportunity.StageName, stageName);
             return this;
         }
 
-        public OpportunityBuilder withCloseDate(Date closeDate) {
+        public Builder withCloseDate(Date closeDate) {
             super.set(Opportunity.CloseDate, closeDate);
             return this;
         }
 
-        public OpportunityBuilder withAmount(Decimal amount) {
+        public Builder withAmount(Decimal amount) {
             super.set(Opportunity.Amount, amount);
             return this;
         }
 
-        public OpportunityBuilder prospecting() {
+        public Builder prospecting() {
             super.useTemplate('prospecting');
             return this;
         }
 
-        public OpportunityBuilder closedWon() {
+        public Builder closedWon() {
             super.useTemplate('closedWon');
             return this;
         }
 
-        public OpportunityBuilder withOpportunityRandomizer() {
+        public Builder withOpportunityRandomizer() {
             super.withRandomizer(new OpportunityRandomizer());
             return this;
         }
     }
 
-    public class OpportunityMocker extends TestModule.RecordMocker {
-        public OpportunityMocker() {
+    public class Mocker extends TestModule.RecordMocker {
+        public Mocker() {
             super(new Opportunity(Name = 'Test Opportunity', StageName = 'Prospecting', CloseDate = Date.today().addDays(30)));
         }
 
-        public OpportunityMocker withName(String name) {
+        public Mocker withName(String name) {
             super.set(Opportunity.Name, name);
             return this;
         }
 
-        public OpportunityMocker withStageName(String stageName) {
+        public Mocker withStageName(String stageName) {
             super.set(Opportunity.StageName, stageName);
             return this;
         }
 
-        public OpportunityMocker withCloseDate(Date closeDate) {
+        public Mocker withCloseDate(Date closeDate) {
             super.set(Opportunity.CloseDate, closeDate);
             return this;
         }
 
-        public OpportunityMocker withAmount(Decimal amount) {
+        public Mocker withAmount(Decimal amount) {
             super.set(Opportunity.Amount, amount);
             return this;
         }
 
-        public OpportunityMocker withAccountName(String accountName) {
+        public Mocker withAccountName(String accountName) {
             super.set('Account.Name', accountName);
             return this;
         }
 
-        public OpportunityMocker withFakeId() {
+        public Mocker withFakeId() {
             super.setFakeId();
             return this;
         }
 
-        public OpportunityMocker withOpportunityRandomizer() {
+        public Mocker withOpportunityRandomizer() {
             super.withRandomizer(new OpportunityRandomizer());
             return this;
         }

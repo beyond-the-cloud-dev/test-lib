@@ -1,70 +1,70 @@
 @IsTest
 public class AccountTestModule implements TestModule.BuilderProvider, TestModule.MockerProvider {
-    public static AccountBuilder Builder() {
-        return new AccountBuilder();
+    public static Builder Builder() {
+        return new Builder();
     }
 
-    public static AccountMocker Mocker() {
-        return new AccountMocker();
+    public static Mocker Mocker() {
+        return new Mocker();
     }
 
-    public class AccountBuilder extends TestModule.RecordBuilder {
-        public AccountBuilder() {
+    public class Builder extends TestModule.RecordBuilder {
+        public Builder() {
             super(new Templates());
         }
 
-        public AccountBuilder withName(String name) {
+        public Builder withName(String name) {
             super.set(Account.Name, name);
             return this;
         }
 
-        public AccountBuilder withIndustry(String industry) {
+        public Builder withIndustry(String industry) {
             super.set(Account.Industry, industry);
             return this;
         }
 
-        public AccountBuilder enterprise() {
+        public Builder enterprise() {
             super.useTemplate('enterprise');
             return this;
         }
 
-        public AccountBuilder startup() {
+        public Builder startup() {
             super.useTemplate('startup');
             return this;
         }
 
-        public AccountBuilder withRandomIndustry() {
+        public Builder withRandomIndustry() {
             super.withRandomizer(Account.Industry, new IndustryRandomizer());
             return this;
         }
 
-        public AccountBuilder withAccountRandomizer() {
+        public Builder withAccountRandomizer() {
             super.withRandomizer(new AccountRandomizer());
             return this;
         }
     }
 
-    public class AccountMocker extends TestModule.RecordMocker {
-        public AccountMocker() {
+    public class Mocker extends TestModule.RecordMocker {
+        public Mocker() {
             super(new Account(Name = 'Test Account', Industry = 'Technology'));
         }
 
-        public AccountMocker withContacts(List<Contact> contacts) {
+        public Mocker withContacts(List<Contact> contacts) {
             super.setChildren('Contacts', contacts);
             return this;
         }
 
-        public AccountMocker withParentName(String parentName) {
+        public Mocker withParentName(String parentName) {
             super.set('Parent.Name', parentName);
             return this;
         }
 
-        public AccountMocker withRandomIndustry() {
+        public Mocker withRandomIndustry() {
             super.withRandomizer(Account.Industry, new IndustryRandomizer());
             return this;
         }
 
-        public AccountMocker withAccountRandomizer() {
+        public Mocker withAccountRandomizer() {
             super.withRandomizer(new AccountRandomizer());
             return this;
         }

@@ -27,81 +27,81 @@ Test Lib is part of [Apex Fluently](https://apexfluently.beyondthecloud.dev/), a
 ```java
 @IsTest
 public class ContactTestModule implements TestModule.BuilderProvider, TestModule.MockerProvider {
-    public static ContactBuilder Builder() {
-        return new ContactBuilder();
+    public static Builder Builder() {
+        return new Builder();
     }
 
-    public static ContactMocker Mocker() {
-        return new ContactMocker();
+    public static Mocker Mocker() {
+        return new Mocker();
     }
 
-    public class ContactBuilder extends TestModule.RecordBuilder {
-        public ContactBuilder() {
+    public class Builder extends TestModule.RecordBuilder {
+        public Builder() {
             super(new Templates());
         }
 
-        public ContactBuilder withFirstName(String firstName) {
+        public Builder withFirstName(String firstName) {
             super.set(Contact.FirstName, firstName);
             return this;
         }
 
-        public ContactBuilder withLastName(String lastName) {
+        public Builder withLastName(String lastName) {
             super.set(Contact.LastName, lastName);
             return this;
         }
 
-        public ContactBuilder withEmail(String email) {
+        public Builder withEmail(String email) {
             super.set(Contact.Email, email);
             return this;
         }
 
-        public ContactBuilder business() {
+        public Builder business() {
             super.useTemplate('business');
             return this;
         }
 
-        public ContactBuilder personal() {
+        public Builder personal() {
             super.useTemplate('personal');
             return this;
         }
 
-        public ContactBuilder withContactRandomizer() {
+        public Builder withContactRandomizer() {
             super.withRandomizer(new ContactRandomizer());
             return this;
         }
     }
 
-    public class ContactMocker extends TestModule.RecordMocker {
-        public ContactMocker() {
+    public class Mocker extends TestModule.RecordMocker {
+        public Mocker() {
             super(new Contact(FirstName = 'Test', LastName = 'Contact', Email = 'test.contact@example.com'));
         }
 
-        public ContactMocker withFirstName(String firstName) {
+        public Mocker withFirstName(String firstName) {
             super.set(Contact.FirstName, firstName);
             return this;
         }
 
-        public ContactMocker withLastName(String lastName) {
+        public Mocker withLastName(String lastName) {
             super.set(Contact.LastName, lastName);
             return this;
         }
 
-        public ContactMocker withEmail(String email) {
+        public Mocker withEmail(String email) {
             super.set(Contact.Email, email);
             return this;
         }
 
-        public ContactMocker withAccountName(String accountName) {
+        public Mocker withAccountName(String accountName) {
             super.set('Account.Name', accountName);
             return this;
         }
 
-        public ContactMocker withFakeId() {
+        public Mocker withFakeId() {
             super.setFakeId();
             return this;
         }
 
-        public ContactMocker withContactRandomizer() {
+        public Mocker withContactRandomizer() {
             super.withRandomizer(new ContactRandomizer());
             return this;
         }
