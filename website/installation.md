@@ -2,8 +2,6 @@
 
 ## Install via Unlocked Package
 
-Install the Test Lib unlocked package with `btcdev` namespace to your Salesforce environment:
-
 <!--
 sf package version create --package "Test Lib" --target-dev-hub beyondthecloud-prod --installation-key-bypass --wait 30 --code-coverage
 
