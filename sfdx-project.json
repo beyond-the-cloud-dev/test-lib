@@ -1,20 +1,28 @@
 {
   "packageDirectories": [
     {
-      "versionName": "ver 1.0",
-      "versionNumber": "1.0.0.NEXT",
-      "path": "force-app",
+      "versionName": "ver 0.1",
+      "versionNumber": "0.1.0.NEXT",
+      "path": "package",
       "default": true,
       "package": "Test Lib",
-      "versionDescription": "Apex test data builder library with Builder and Mocker patterns for creating test records"
+      "versionDescription": ""
     },
     {
       "path": "examples",
+      "default": false
+    },
+    {
+      "path": "force-app",
       "default": false
     }
   ],
   "name": "BeyondTheCloud",
   "namespace": "btcdev",
   "sfdcLoginUrl": "https://login.salesforce.com",
-  "sourceApiVersion": "65.0"
+  "sourceApiVersion": "65.0",
+  "packageAliases": {
+    "Test Lib": "0HoP600000002OPKAY",
+    "Test Lib@0.1.0-1": "04tP600000390yLIAQ"
+  }
 }
