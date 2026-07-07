@@ -1,6 +1,7 @@
 import { defineConfig } from "vitepress";
 
 export default defineConfig({
+  cleanUrls: true,
   title: "Test Lib",
   description:
     "Apex test data builder library with Builder and Mocker patterns for creating test records in Salesforce",
