@@ -5,19 +5,19 @@
 <!--
 sf package version create --package "Test Lib" --target-dev-hub beyondthecloud-prod --installation-key-bypass --wait 30 --code-coverage
 
-sf package version promote --package "Test Lib@0.1.0-1"  --target-dev-hub beyondthecloud-prod
+sf package version promote --package "Test Lib@0.0.2-1"  --target-dev-hub beyondthecloud-prod
 
 -->
 
 Install the Test Lib unlocked package with `btcdev` namespace to your Salesforce environment:
 
-`/packaging/installPackage.apexp?p0=04tP600000390yLIAQ`
+`/packaging/installPackage.apexp?p0=04tP6000003h91VIAQ`
 
-<a href="https://test.salesforce.com/packaging/installPackage.apexp?p0=04tP600000390yLIAQ" target="_blank" style="display: inline-block; background-color: #1976d2; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; margin-right: 10px;">
+<a href="https://test.salesforce.com/packaging/installPackage.apexp?p0=04tP6000003h91VIAQ" target="_blank" style="display: inline-block; background-color: #1976d2; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; margin-right: 10px;">
     <p style="margin: 0px;">Install on Sandbox</p>
 </a>
 
-<a href="https://login.salesforce.com/packaging/installPackage.apexp?p0=04tP600000390yLIAQ" target="_blank" style="display: inline-block; background-color: #d32f2f; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">
+<a href="https://login.salesforce.com/packaging/installPackage.apexp?p0=04tP6000003h91VIAQ" target="_blank" style="display: inline-block; background-color: #d32f2f; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">
     <p style="margin: 0px;">Install on Production</p>
 </a>
 

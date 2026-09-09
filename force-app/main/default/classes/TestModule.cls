@@ -2,7 +2,7 @@
  * Copyright (c) 2026 Beyond The Cloud Sp. z o.o. (BeyondTheCloud.Dev)
  * Licensed under the MIT License (https://github.com/beyond-the-cloud-dev/test-lib/blob/main/LICENSE)
  * 
- * v0.2.0
+ * v0.0.2
 **/
 @IsTest
 @TestVisible

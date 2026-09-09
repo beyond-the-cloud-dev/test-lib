@@ -2,7 +2,7 @@
  * Copyright (c) 2026 Beyond The Cloud Sp. z o.o. (BeyondTheCloud.Dev)
  * Licensed under the MIT License (https://github.com/beyond-the-cloud-dev/test-lib/blob/main/LICENSE)
  * 
- * v0.2.0
+ * v0.0.2
 **/
 @IsTest
 global class TestModule {
@@ -67,17 +67,23 @@ global class TestModule {
         return new ListRandomizer(values);
     }
 
+    private static void validateRecordsAmount(Integer amount) {
+        if (amount == null || amount < 0) {
+            throw new TestModuleException('Amount must be zero or greater, but was: ' + amount + '.');
+        }
+    }
+
     global abstract class RecordBuilder implements Builder {
         private SObject prototype;
         private Template templates;
         private RandomizersContainer randomizers = new RandomizersContainer();
 
         global RecordBuilder(SObject prototype) {
-            this.prototype = prototype;
+            this.prototype = prototype.clone(true, true, true, true);
         }
 
         global RecordBuilder(Template templates) {
-            this.prototype = templates.defaultTemplate();
+            this(templates.defaultTemplate());
             this.templates = templates;
         }
 
@@ -125,17 +131,21 @@ global class TestModule {
         }
 
         global SObject build() {
-            this.randomizers.randomizeFieldsValues(this.prototype, 0);
-            return this.prototype;
+            SObject record = this.prototype.clone(true, true, true, true);
+            this.randomizers.randomizeFieldsValues(record, 0);
+            return record;
         }
 
         global SObject buildAndInsert() {
-            insert as system this.prototype;
-            return this.prototype;
+            SObject record = this.build();
+            insert as system record;
+            return record;
         }
 
         global List<SObject> build(Integer amount) {
-            List<SObject> records = new List<SObject>();
+            validateRecordsAmount(amount);
+
+            List<SObject> records = (List<SObject>) Type.forName('List<' + this.prototype.getSObjectType() + '>').newInstance();
             this.randomizeFieldsValues(records, amount);
             return records;
         }
@@ -160,6 +170,7 @@ global class TestModule {
         private Map<String, List<SObject>> children = new Map<String, List<SObject>>();
         private Template templates;
         private RandomizersContainer randomizers = new RandomizersContainer();
+        private Boolean withFakeId = false;
 
         private SObjectType prototypeType;
 
@@ -183,12 +194,12 @@ global class TestModule {
         }
 
         global virtual RecordMocker setChildren(String relationship, List<SObject> records) {
-            this.children.put(relationship, records);
+            this.children.put(relationship, records.deepClone(true, true, true));
             return this;
         }
 
         global virtual RecordMocker setFakeId() {
-            this.fields.put('Id', TestModule.IdGenerator.get(this.prototypeType));
+            this.withFakeId = true;
             return this;
         }
 
@@ -212,7 +223,9 @@ global class TestModule {
         }
 
         global List<SObject> build(Integer amount) {
-            List<SObject> records = new List<SObject>();
+            validateRecordsAmount(amount);
+
+            List<SObject> records = (List<SObject>) Type.forName('List<' + this.prototypeType + '>').newInstance();
             for (Integer i = 0; i < amount; i++) {
                 records.add(this.buildWithIndex(i));
             }
@@ -223,6 +236,11 @@ global class TestModule {
             Map<String, Object> record = new Map<String, Object>();
 
             this.setNested(record);
+
+            if (this.withFakeId) {
+                record.put('Id', TestModule.IdGenerator.get(this.prototypeType));
+            }
+
             this.setChildren(record);
 
             this.randomizers.randomizeFieldsValues(record, index);
@@ -271,6 +289,10 @@ global class TestModule {
         private List<Object> values;
 
         global ListRandomizer(List<Object> values) {
+            if (values == null || values.isEmpty()) {
+                throw new TestModuleException('ListRandomizer requires at least one value.');
+            }
+
             this.values = values;
         }
 
@@ -353,7 +375,7 @@ global class TestModule {
         global Id getId(SObjectType objectType, String recordTypeDeveloperName) {
             return byDeveloperName(objectType, recordTypeDeveloperName)?.getRecordTypeId();
         }
-    
+
         private Schema.RecordTypeInfo byDeveloperName(SObjectType objectType, String recordTypeDeveloperName) {
             if (
                 !this.OBJECT_TYPE_TO_RECORD_TYPE_BY_DEVELOPER_NAME.containsKey(objectType) ||
@@ -361,10 +383,10 @@ global class TestModule {
             ) {
                 load(objectType);
             }
-    
+
             return this.OBJECT_TYPE_TO_RECORD_TYPE_BY_DEVELOPER_NAME.get(objectType).get(recordTypeDeveloperName);
         }
-    
+
         private void load(SObjectType objectType) {
             Schema.DescribeSObjectResult describe = objectType.getDescribe(SObjectDescribeOptions.DEFERRED);
             this.OBJECT_TYPE_TO_RECORD_TYPE_BY_DEVELOPER_NAME.put(objectType, describe.getRecordTypeInfosByDeveloperName());

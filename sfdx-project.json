@@ -1,8 +1,8 @@
 {
   "packageDirectories": [
     {
-      "versionName": "ver 0.1",
-      "versionNumber": "0.1.0.NEXT",
+      "versionName": "ver 0.2",
+      "versionNumber": "0.0.2.NEXT",
       "path": "package",
       "default": true,
       "package": "Test Lib",
@@ -23,6 +23,7 @@
   "sourceApiVersion": "67.0",
   "packageAliases": {
     "Test Lib": "0HoP600000002OPKAY",
-    "Test Lib@0.1.0-1": "04tP600000390yLIAQ"
+    "Test Lib@0.1.0-1": "04tP600000390yLIAQ",
+    "Test Lib@0.0.2-1": "04tP6000003h91VIAQ"
   }
 }
