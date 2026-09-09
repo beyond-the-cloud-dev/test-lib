@@ -68,6 +68,7 @@ private class TestModule_Test {
         List<SObject> accounts = new AccountTestModule().Builder().build(5);
 
         Assert.areEqual(5, accounts.size());
+        Assert.areEqual(Account.SObjectType, accounts.getSObjectType(), 'The built list must be concretely typed.');
         for (SObject acc : accounts) {
             Assert.areEqual('Test Account', acc.get('Name'));
         }
@@ -274,6 +275,7 @@ private class TestModule_Test {
         List<SObject> accounts = new AccountTestModule().Mocker().build(3);
 
         Assert.areEqual(3, accounts.size());
+        Assert.areEqual(Account.SObjectType, accounts.getSObjectType(), 'The built list must be concretely typed.');
         for (SObject acc : accounts) {
             Assert.areEqual('Test Account', acc.get('Name'));
         }

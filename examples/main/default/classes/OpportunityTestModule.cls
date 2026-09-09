@@ -49,7 +49,7 @@ public class OpportunityTestModule implements TestModule.BuilderProvider, TestMo
         }
     }
 
-    private class Mocker extends TestModule.RecordMocker {
+    public class Mocker extends TestModule.RecordMocker {
         private Mocker() {
             super(new Opportunity(Name = 'Test Opportunity', StageName = 'Prospecting', CloseDate = Date.today().addDays(30)));
         }

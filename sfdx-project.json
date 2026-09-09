@@ -20,7 +20,7 @@
   "name": "BeyondTheCloud",
   "namespace": "btcdev",
   "sfdcLoginUrl": "https://login.salesforce.com",
-  "sourceApiVersion": "65.0",
+  "sourceApiVersion": "67.0",
   "packageAliases": {
     "Test Lib": "0HoP600000002OPKAY",
     "Test Lib@0.1.0-1": "04tP600000390yLIAQ"

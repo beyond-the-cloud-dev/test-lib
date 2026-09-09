@@ -2,7 +2,7 @@
  * Copyright (c) 2026 Beyond The Cloud Sp. z o.o. (BeyondTheCloud.Dev)
  * Licensed under the MIT License (https://github.com/beyond-the-cloud-dev/test-lib/blob/main/LICENSE)
  * 
- * v0.1.0
+ * v0.2.0
 **/
 @IsTest
 @TestVisible
@@ -68,17 +68,23 @@ private class TestModule {
         return new ListRandomizer(values);
     }
 
+    private static void validateRecordsAmount(Integer amount) {
+        if (amount == null || amount < 0) {
+            throw new TestModuleException('Amount must be zero or greater, but was: ' + amount + '.');
+        }
+    }
+
     public abstract class RecordBuilder implements Builder {
         private SObject prototype;
         private Template templates;
         private RandomizersContainer randomizers = new RandomizersContainer();
 
         public RecordBuilder(SObject prototype) {
-            this.prototype = prototype;
+            this.prototype = prototype.clone(true, true, true, true);
         }
 
         public RecordBuilder(Template templates) {
-            this.prototype = templates.defaultTemplate();
+            this(templates.defaultTemplate());
             this.templates = templates;
         }
 
@@ -126,17 +132,21 @@ private class TestModule {
         }
 
         public SObject build() {
-            this.randomizers.randomizeFieldsValues(this.prototype, 0);
-            return this.prototype;
+            SObject record = this.prototype.clone(true, true, true, true);
+            this.randomizers.randomizeFieldsValues(record, 0);
+            return record;
         }
 
         public SObject buildAndInsert() {
-            insert as system this.prototype;
-            return this.prototype;
+            SObject record = this.build();
+            insert as system record;
+            return record;
         }
 
         public List<SObject> build(Integer amount) {
-            List<SObject> records = new List<SObject>();
+            validateRecordsAmount(amount);
+
+            List<SObject> records = (List<SObject>) Type.forName('List<' + this.prototype.getSObjectType() + '>').newInstance();
             this.randomizeFieldsValues(records, amount);
             return records;
         }
@@ -161,6 +171,7 @@ private class TestModule {
         private Map<String, List<SObject>> children = new Map<String, List<SObject>>();
         private Template templates;
         private RandomizersContainer randomizers = new RandomizersContainer();
+        private Boolean withFakeId = false;
 
         private SObjectType prototypeType;
 
@@ -184,12 +195,12 @@ private class TestModule {
         }
 
         public virtual RecordMocker setChildren(String relationship, List<SObject> records) {
-            this.children.put(relationship, records);
+            this.children.put(relationship, records.deepClone(true, true, true));
             return this;
         }
 
         public virtual RecordMocker setFakeId() {
-            this.fields.put('Id', TestModule.IdGenerator.get(this.prototypeType));
+            this.withFakeId = true;
             return this;
         }
 
@@ -213,7 +224,9 @@ private class TestModule {
         }
 
         public List<SObject> build(Integer amount) {
-            List<SObject> records = new List<SObject>();
+            validateRecordsAmount(amount);
+
+            List<SObject> records = (List<SObject>) Type.forName('List<' + this.prototypeType + '>').newInstance();
             for (Integer i = 0; i < amount; i++) {
                 records.add(this.buildWithIndex(i));
             }
@@ -224,6 +237,11 @@ private class TestModule {
             Map<String, Object> record = new Map<String, Object>();
 
             this.setNested(record);
+
+            if (this.withFakeId) {
+                record.put('Id', TestModule.IdGenerator.get(this.prototypeType));
+            }
+
             this.setChildren(record);
 
             this.randomizers.randomizeFieldsValues(record, index);
@@ -272,6 +290,10 @@ private class TestModule {
         private List<Object> values;
 
         public ListRandomizer(List<Object> values) {
+            if (values == null || values.isEmpty()) {
+                throw new TestModuleException('ListRandomizer requires at least one value.');
+            }
+
             this.values = values;
         }
 

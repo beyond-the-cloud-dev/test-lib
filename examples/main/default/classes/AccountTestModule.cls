@@ -44,7 +44,7 @@ public class AccountTestModule implements TestModule.BuilderProvider, TestModule
         }
     }
 
-    private class Mocker extends TestModule.RecordMocker {
+    public class Mocker extends TestModule.RecordMocker {
         private Mocker() {
             super(new Account(Name = 'Test Account', Industry = 'Technology'));
         }

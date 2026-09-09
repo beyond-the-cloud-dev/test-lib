@@ -44,7 +44,7 @@ public class ContactTestModule implements TestModule.BuilderProvider, TestModule
         }
     }
 
-    private class Mocker extends TestModule.RecordMocker {
+    public class Mocker extends TestModule.RecordMocker {
         private Mocker() {
             super(new Contact(FirstName = 'Test', LastName = 'Contact', Email = 'test.contact@example.com'));
         }
