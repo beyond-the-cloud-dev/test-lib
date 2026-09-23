@@ -1,11 +1,11 @@
 <div align="center">
-  <a href="https://beyond-the-cloud-dev.github.io/test-lib/">
+  <a href="https://testlib.beyondthecloud.dev">
     <picture>
       <source media="(prefers-color-scheme: dark)" srcset="./website/public/logo.png">
       <img alt="Test Lib logo" src="./website/public/logo.png" height="98">
     </picture>
   </a>
-  <h1>Test Lib (BETA)</h1>
+  <h1><a href="https://testlib.beyondthecloud.dev">Test Lib (BETA)</a></h1>
 
 <a href="https://beyondthecloud.dev"><img alt="Beyond The Cloud logo" src="https://img.shields.io/badge/MADE_BY_BEYOND_THE_CLOUD-555?style=for-the-badge"></a>
 
