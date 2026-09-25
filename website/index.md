@@ -36,4 +36,3 @@ features:
     details: Battle-tested in production. Part of Beyond The Cloud suite of enterprise-grade Salesforce libraries.
 ---
 
-<BTCFooter context="test-lib" />
