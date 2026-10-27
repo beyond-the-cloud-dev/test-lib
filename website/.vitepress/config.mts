@@ -78,6 +78,20 @@ export default defineConfig({
       ["link", { rel: "canonical", href: canonicalUrl }],
       ["meta", { property: "og:url", content: canonicalUrl }],
     );
+    // Markdown twin built by vitepress-plugin-llms (llms.txt for the home page),
+    // served by middleware.js on Accept: text/markdown
+    const markdownPath =
+      pageData.relativePath === "index.md"
+        ? "llms.txt"
+        : pageData.relativePath.replace(/\/index\.md$/, ".md");
+    pageData.frontmatter.head.push([
+      "link",
+      {
+        rel: "alternate",
+        type: "text/markdown",
+        href: `${siteUrl}/${markdownPath}`,
+      },
+    ]);
     const pageTitle = pageData.frontmatter.title || pageData.title;
     pageData.frontmatter.head.push(
       [
