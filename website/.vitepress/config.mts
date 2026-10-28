@@ -11,6 +11,8 @@ export default defineConfig({
   title: siteTitle,
   description: siteDescription,
   base: "/",
+  // Vercel serves clean URLs (vercel.json), so links and the sitemap must not end in .html
+  cleanUrls: true,
   head: [
     ["link", { rel: "icon", href: "/favicon.ico" }],
     // Bing Webmaster Tools site verification
@@ -74,7 +76,7 @@ export default defineConfig({
   transformPageData(pageData) {
     const canonicalUrl = `${siteUrl}/${pageData.relativePath}`
       .replace(/index\.md$/, "")
-      .replace(/\.md$/, ".html");
+      .replace(/\.md$/, "");
     pageData.frontmatter.head ??= [];
     pageData.frontmatter.head.push(
       ["link", { rel: "canonical", href: canonicalUrl }],
